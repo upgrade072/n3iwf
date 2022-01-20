@@ -11,7 +11,6 @@ fi
 
 VERSION="1.0.19"
 if [ ! -f lksctp-tools-${VERSION}.tar.gz ]; then
-	wget https://hyperrealm.github.io/libconfig/dist/libconfig-${VERSION}.tar.gz
 	wget https://github.com/sctp/lksctp-tools/archive/refs/tags/lksctp-tools-${VERSION}.tar.gz
 fi
 

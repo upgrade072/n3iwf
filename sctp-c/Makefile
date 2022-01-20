@@ -5,6 +5,8 @@ BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libsctp.a \
+				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
+				  $(BUILD_LIBS_PATH)/libevent.a \
 				  -lpthread -lrt -lm -ldl
 
 SRCS			= main.c
