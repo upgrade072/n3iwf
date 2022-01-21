@@ -1,4 +1,4 @@
-SUBDIRS := libconfig libutil libevent lksctp sctp-c
+SUBDIRS := liblocal libconfig libevent lksctp sctp-c
 
 subdirs: $(SUBDIRS)
 

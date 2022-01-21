@@ -3,6 +3,7 @@ include ../MakeVars
 BUILD_INC_PATH	= -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
+				  $(BUILD_LIBS_PATH)/libnode.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libsctp.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
