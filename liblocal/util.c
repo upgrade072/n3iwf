@@ -51,3 +51,60 @@ void *util_get_shm(int key, size_t size, const char *prefix)
 
 	return shmat(shm_id, NULL, 0);
 }
+
+// return ip address 
+char *util_get_ip_from_sa(struct sockaddr *sa)
+{
+    struct sockaddr_in *peer_addr = (struct sockaddr_in *)sa;
+    return inet_ntoa(peer_addr->sin_addr);
+}
+
+// return port no
+int util_get_port_from_sa(struct sockaddr *sa)
+{
+    in_port_t port = {0,};
+
+    if (sa->sa_family == AF_INET) {
+        port = (((struct sockaddr_in*)sa)->sin_port);
+    } else {
+        port = (((struct sockaddr_in6*)sa)->sin6_port);
+    }
+
+    return ntohs(port);
+}
+
+// set so_linger (abort) option to sock
+int util_set_linger(int fd, int onoff, int linger)
+{
+    struct linger l = { .l_linger = linger, .l_onoff = onoff};
+    int res = setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
+
+    return res;
+}
+
+int util_set_rcvbuffsize(int fd, int byte)
+{
+    int opt = byte;
+    int res = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
+
+    return res;
+}
+
+int util_set_sndbuffsize(int fd, int byte)
+{
+    int opt = byte;
+    int res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt));
+
+    return res;
+}
+
+// set keepalived option to sock
+int util_set_keepalive(int fd, int keepalive, int cnt, int idle, int intvl)
+{
+    int res = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+    res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &idle, sizeof(idle));
+    res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+    res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
+
+    return res;
+}

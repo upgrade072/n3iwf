@@ -23,6 +23,13 @@
 #include <event2/event.h>
 #include <event2/thread.h>
 
+typedef union {
+	struct sockaddr_storage ss;
+	struct sockaddr_in v4;
+	struct sockaddr_in6 v6;
+	struct sockaddr sa;
+} sockaddr_storage_t;
+
 typedef struct recv_buf_t {
 	int occupied;
 	int size;
@@ -65,9 +72,10 @@ typedef struct qid_info_t {
 } qid_info_t;
 
 typedef struct conn_status_t {
-	int assoc_id;
 	int conns_fd;
+	int assoc_id;
 	int connected;
+	struct event conn_ev;
 } conn_status_t;
 
 typedef struct conn_info_t {
@@ -102,13 +110,13 @@ typedef struct sctp_client_t {
 	int id;
 	char name[128];
 	int enable;
+
 	int src_addr_num;
 	int dst_addr_num;
 	struct sockaddr_in src_addr[MAX_SC_ADDR_NUM];
 	struct sockaddr_in dst_addr[MAX_SC_ADDR_NUM];
+
 	int conn_num;
-	int sport;
-	int dport;
 	conn_status_t conn_status[MAX_SC_CONN_NUM];
 } sctp_client_t;
 

@@ -2,6 +2,101 @@
 
 main_ctx_t main_ctx, *MAIN_CTX = &main_ctx;
 
+static struct sctp_event_subscribe SCTP_NOTIF_EVENT = {
+	.sctp_data_io_event = 1,
+	.sctp_association_event = 1,
+	.sctp_address_event = 1,
+	.sctp_send_failure_event = 1,
+	.sctp_peer_error_event = 1,
+	.sctp_shutdown_event = 1,
+	.sctp_partial_delivery_event = 1,
+	.sctp_adaptation_layer_event = 1,
+	.sctp_authentication_event = 1,
+	.sctp_sender_dry_event = 1,
+	.sctp_stream_reset_event = 1,
+	.sctp_assoc_reset_event = 1,
+	.sctp_stream_change_event = 1,
+	.sctp_send_failure_event_event = 1,
+};
+
+static struct sctp_initmsg SCTP_INIT_MESSAGE = {
+	.sinit_num_ostreams = 5,
+	.sinit_max_instreams = 5,
+	.sinit_max_attempts = 4,
+	/* .sinit_max_init_timeo = 0 */
+};
+
+void client_read_cb(struct bufferevent *bev, void *data)
+{
+	fprintf(stderr, "%s called!\n", __func__);
+
+	conn_status_t *conn_status = (conn_status_t *)data;
+	int sock_fd = bufferevent_getfd(bev);
+	fprintf(stderr, "fd=(%d) fd=(%d)\n", conn_status->conns_fd, sock_fd);
+
+	struct sctp_sndrcvinfo sinfo = {0,};
+	char buffer[65536] = {0,};
+	int msg_flags = MSG_DONTWAIT;
+	struct sockaddr from = {0,};
+	socklen_t from_len = sizeof(from);
+
+#if 0
+	int recv_bytes = sctp_recvmsg(sock_fd, buffer, 65536, &from, &from_len, &sinfo, &msg_flags);
+
+	if (msg_flags & MSG_NOTIFICATION) {
+		fprintf(stderr, "recv notification!\n");
+	} else {
+		fprintf(stderr, "recv (%d) bytes! (%d:%s)\n", recv_bytes, errno, strerror(errno));
+	}
+#else
+	ssize_t rcv_len = bufferevent_read(bev, buffer, 65535);
+	fprintf(stderr, "rcv_len=(%ld) [%s]\n", rcv_len, buffer);
+#endif
+}
+
+void client_write_cb(struct bufferevent *bev, void *data)
+{
+	fprintf(stderr, "%s called!\n", __func__);
+}
+
+void client_event_cb(struct bufferevent *bev, short events, void *data)
+{
+	fprintf(stderr, "%s called! ", __func__);
+
+	if (events & /* peer shutdown/abort */ BEV_EVENT_EOF) {
+		fprintf(stderr, "eof\n");
+	} else if (events & /* connection failed */ BEV_EVENT_ERROR) {
+		fprintf(stderr, "error\n");
+	} else if (events & /* connected */ BEV_EVENT_CONNECTED) {
+		printf(stderr, "connected\n");
+	} else {
+		fprintf(stderr, "unknown event=(%d)\n", events);
+	}
+}
+
+void test_code(int conn_fd, short events, void *data)
+{
+	conn_status_t *conn_status = (conn_status_t *)data;
+
+	struct sctp_sndrcvinfo sinfo = {0,};
+	char buffer[65536] = {0,};
+	int msg_flags = MSG_DONTWAIT;
+	struct sockaddr from = {0,};
+	socklen_t from_len = sizeof(from);
+	int recv_bytes = 0;
+
+RETRY:
+	recv_bytes = sctp_recvmsg(conn_fd, buffer, 65536, &from, &from_len, &sinfo, &msg_flags);
+
+	if (msg_flags & MSG_NOTIFICATION) {
+		fprintf(stderr, "recv notification!\n");
+	} else {
+		fprintf(stderr, "recv (%d) bytes! (%d:%s)\n", recv_bytes, errno, strerror(errno));
+	}
+
+	if (recv_bytes > 0) goto RETRY;
+}
+
 void create_client(worker_ctx_t *worker_ctx, conn_info_t *conn)
 {
 	link_node *node = link_node_assign_key_order(&worker_ctx->conn_list, conn->name, sizeof(sctp_client_t));
@@ -13,7 +108,36 @@ void create_client(worker_ctx_t *worker_ctx, conn_info_t *conn)
 	client->conn_num = conn->conn_num;
 
 	for (int i = 0; i < MAX_SC_ADDR_NUM; i++) {
-		// TODO
+		if (strlen(conn->src_addr[i])) {
+			client->src_addr_num++;
+			client->src_addr[i].sin_family = AF_INET;
+			client->src_addr[i].sin_addr.s_addr = inet_addr(conn->src_addr[i]);
+			client->src_addr[i].sin_port = htons(conn->sport);
+		}
+		if (strlen(conn->dst_addr[i])) {
+			client->dst_addr_num++;
+			client->dst_addr[i].sin_family = AF_INET;
+			client->dst_addr[i].sin_addr.s_addr = inet_addr(conn->dst_addr[i]);
+			client->dst_addr[i].sin_port = htons(conn->dport);
+		}
+	}
+
+	if (client->enable) {
+		for (int i = 0; i < client->enable && i < MAX_SC_CONN_NUM; i++) {
+			conn_status_t *conn_status = &client->conn_status[i];
+			conn_status->conns_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+			evutil_make_socket_nonblocking(conn_status->conns_fd);
+
+			sctp_bindx(conn_status->conns_fd, (struct sockaddr *)client->src_addr, client->src_addr_num, SCTP_BINDX_ADD_ADDR);
+			setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_EVENTS, &SCTP_NOTIF_EVENT, sizeof(SCTP_NOTIF_EVENT));
+			setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_INITMSG, &SCTP_INIT_MESSAGE, sizeof(SCTP_INIT_MESSAGE));
+			util_set_linger(conn_status->conns_fd, 1, 0);	/* we use ABORT */
+
+			event_set(&conn_status->conn_ev, conn_status->conns_fd, EV_READ|EV_PERSIST, test_code, conn_status);
+			event_base_set(worker_ctx->evbase_thrd, &conn_status->conn_ev);
+			event_add(&conn_status->conn_ev, NULL);
+			sctp_connectx(conn_status->conns_fd, (struct sockaddr *)client->dst_addr, client->dst_addr_num, &conn_status->assoc_id);
+		}
 	}
 }
 
@@ -35,14 +159,13 @@ void io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 void *io_worker_thread(void *arg)
 {
 	worker_ctx_t *worker_ctx = (worker_ctx_t *)arg;
+	worker_ctx->evbase_thrd = event_base_new();
 
 	io_worker_init(worker_ctx, MAIN_CTX);
 
-	worker_ctx->evbase_thrd = event_base_new();
+	event_base_loop(worker_ctx->evbase_thrd, EVLOOP_NO_EXIT_ON_EMPTY);
 
-	while (1) {
-		sleep(1);
-	}
+	return NULL;
 }
 
 void *bf_worker_thread(void *arg)
@@ -93,7 +216,7 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
 		return (-1);
 	}
 
-	WORKER->workers = malloc(sizeof(worker_ctx_t) * WORKER->worker_num);
+	WORKER->workers = calloc(1, sizeof(worker_ctx_t) * WORKER->worker_num);
 
 	for (int i = 0; i < WORKER->worker_num; i++) {
 		worker_ctx_t *worker_ctx = &WORKER->workers[i];
