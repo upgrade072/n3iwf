@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/queue.h>
 
 #include <node.h>
 #include <libutil.h>
@@ -71,11 +72,18 @@ typedef struct qid_info_t {
 	ppid_pqid_t *recv_relay;
 } qid_info_t;
 
+typedef struct tailq_entry {
+	TAILQ_ENTRY(tailq_entry) items;
+
+	/* TODO something */
+} tailq_entry;
+
 typedef struct conn_status_t {
 	int conns_fd;
 	int assoc_id;
-	int connected;
-	struct event conn_ev;
+	int assoc_state;
+	struct event *conn_ev;
+	TAILQ_HEAD(, tailq_entry) queue_head;
 } conn_status_t;
 
 typedef struct conn_info_t {
@@ -130,14 +138,31 @@ typedef struct main_ctx_t {
 } main_ctx_t;
 
 /* ------------------------- main.c --------------------------- */
-void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-void    *io_worker_thread(void *arg);
-void    *bf_worker_thread(void *arg);
 int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+int     main();
+
+/* ------------------------- list.c --------------------------- */
 conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
 int     sort_conn_list(const void *a, const void *b);
 void    disp_conn_list(main_ctx_t *MAIN_CTX);
 void    init_conn_list(main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
-int     main();
+
+/* ------------------------- io_worker.c --------------------------- */
+void    handle_sock_cb(int conn_fd, short events, void *data);
+void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client, int garbage);
+void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
+void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
+void    check_connection(worker_ctx_t *worker_ctx);
+void    thrd_tick(evutil_socket_t fd, short events, void *data);
+void    *io_worker_thread(void *arg);
+
+/* ------------------------- bf_worker.c --------------------------- */
+void    *bf_worker_thread(void *arg);
+
+/* ------------------------- stack.c --------------------------- */
+int     sctp_noti_assoc_change(struct sctp_assoc_change *sac, const char **event_state);
+int     sctp_noti_peer_addr_change(struct sctp_paddr_change *spc, const char **event_state);
+int     handle_sctp_notification(union sctp_notification *notif, size_t notif_len, const char **event_str, const char **event_state);
+int     get_assoc_state(int sd, int assoc_id, const char **state_str);

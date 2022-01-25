@@ -10,7 +10,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  -lpthread -lrt -lm -ldl
 
-SRCS			= main.c
+SRCS			= main.c list.c io_worker.c bf_worker.c stack.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= sctp_c
 DEST			= ../bin
