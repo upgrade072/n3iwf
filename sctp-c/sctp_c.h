@@ -151,7 +151,8 @@ void    init_conn_list(main_ctx_t *MAIN_CTX);
 
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_sock_cb(int conn_fd, short events, void *data);
-void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client, int garbage);
+void    clear_connection(conn_status_t *conn_status);
+void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client);
 void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
 void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 void    check_connection(worker_ctx_t *worker_ctx);

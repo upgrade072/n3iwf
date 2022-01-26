@@ -73,7 +73,7 @@ RECV_MORE:
 	}
 }
 
-void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client, int garbage)
+void clear_connection(conn_status_t *conn_status)
 {
 	/* clear resource */
 	if (!TAILQ_EMPTY(&conn_status->queue_head)) {
@@ -96,11 +96,31 @@ void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_clien
 		event_free(conn_status->conn_ev);
 		conn_status->conn_ev = NULL;
 	}
+}
 
-	/* should i reconnect? or not? */
-	if (!client->enable || garbage) {
-		return;
+void check_connection(worker_ctx_t *worker_ctx)
+{
+	for (int i = 0; i < link_node_length(&worker_ctx->conn_list); i++) {
+		sctp_client_t *client = link_node_get_nth_data(&worker_ctx->conn_list, i);
+		if (client == NULL) continue;
+
+		for (int k = 0; k < MAX_SC_CONN_NUM; k++) {
+			if (client->conn_status[k].assoc_state > 0) {
+				if (!client->enable || k >= client->conn_num) {
+					clear_connection(&client->conn_status[k]);
+				} 
+			} else {
+				if (client->enable && k < client->conn_num) {
+					client_new(&client->conn_status[k], worker_ctx, client);
+				}
+			}
+		}
 	}
+}
+
+void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client)
+{
+	clear_connection(conn_status);
 
 	/* ok try reconnect */
 	conn_status->conns_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
@@ -145,7 +165,9 @@ void create_client(worker_ctx_t *worker_ctx, conn_info_t *conn)
 
 	/* conn num trigger */
 	for (int i = 0; i < client->conn_num && i < MAX_SC_CONN_NUM; i++) {
-		client_new(&client->conn_status[i], worker_ctx, client, 0);
+		if (client->enable) {
+			client_new(&client->conn_status[i], worker_ctx, client);
+		}
 	}
 }
 
@@ -161,22 +183,6 @@ void io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 		if (conn->id % MAIN_CTX->IO_WORKERS.worker_num != worker_ctx->thread_index) continue;
 
 		create_client(worker_ctx, conn);
-	}
-}
-
-void check_connection(worker_ctx_t *worker_ctx)
-{
-	for (int i = 0; i < link_node_length(&worker_ctx->conn_list); i++) {
-		sctp_client_t *client = link_node_get_nth_data(&worker_ctx->conn_list, i);
-		if (client == NULL) continue;
-
-		/* if enable -> reconnect | or disable -> disconnect */
-		for (int k = 0; k < MAX_SC_CONN_NUM; k++) {
-			if (client->conn_status[k].assoc_state < 0) {
-				fprintf(stderr, "%s() retry conn [%s]-[%02d]\n", __func__, client->name,  k);
-				client_new(&client->conn_status[k], worker_ctx, client, k > client->conn_num);
-			}
-		}
 	}
 }
 
