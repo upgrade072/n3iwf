@@ -6,12 +6,12 @@ int create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 {
 	config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_size_at_bf", &worker_ctx->recv_buff.each_size);
 	config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_count_at_bf", &worker_ctx->recv_buff.total_num);
-	if ((worker_ctx->recv_buff.each_size <= 0 || worker_ctx->recv_buff.each_size > MAX_MAIN_BUFF_SIZE) ||
-		(worker_ctx->recv_buff.total_num <= 0 || worker_ctx->recv_buff.total_num > MAX_MAIN_BUFF_NUM)) {
+	if ((worker_ctx->recv_buff.each_size <= 0 || worker_ctx->recv_buff.each_size > MAX_SCTP_BUFF_SIZE) ||
+		(worker_ctx->recv_buff.total_num <= 0 || worker_ctx->recv_buff.total_num > MAX_SCTP_BUFF_NUM)) {
 		fprintf(stderr, "%s() fatal! process_config.queue_size_at_bf=(%d/max=%d) process_config.queue_count_at_bf=(%d/max=%d)!\n",
 				__func__, 
-				worker_ctx->recv_buff.each_size, MAX_MAIN_BUFF_SIZE,
-				worker_ctx->recv_buff.total_num, MAX_MAIN_BUFF_NUM);
+				worker_ctx->recv_buff.each_size, MAX_SCTP_BUFF_SIZE,
+				worker_ctx->recv_buff.total_num, MAX_SCTP_BUFF_NUM);
 		return (-1);
 	}
 
@@ -164,5 +164,19 @@ int main()
 	// todo ... //
 	while (1) {
 		sleep (1);
+
+		//int msgsnd(int msqid, const void *msgp, size_t msgsz, int msgflg);
+
+		sctp_msg_t send_msg;
+		send_msg.mtype = 1;
+		memset(&send_msg.tag, 0x00, sizeof(sctp_tag_t));
+		sprintf(send_msg.tag.hostname, "%s", "test_conn_1");
+		sprintf(send_msg.msg_body, "123456");
+		send_msg.msg_size = strlen(send_msg.msg_body);
+
+		int ret = msgsnd(MAIN_CTX->QID_INFO.send_relay, &send_msg, sizeof(sctp_tag_t) + sizeof(int) + sizeof(size_t) + send_msg.msg_size, IPC_NOWAIT);
+		fprintf(stderr, "{dbg} ret=(%d) (%d:%s)\n", ret, errno, strerror(errno));
+
+		//MAIN_CTX->QID_INFO.send_relay
 	}
 }

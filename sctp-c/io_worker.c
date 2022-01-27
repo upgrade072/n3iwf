@@ -27,7 +27,75 @@ static struct sctp_initmsg SCTP_INIT_MESSAGE = {
 	/* .sinit_max_init_timeo = 0 */
 };
 
-void handle_sock_cb(int conn_fd, short events, void *data)
+static struct sctp_paddrparams SCTP_PADDR_PARAMS = {
+	.spp_flags = SPP_HB_ENABLE,
+	.spp_hbinterval = 1000,
+	.spp_pathmaxrxt = 5,
+	/* TODO : check disable status */
+};
+
+void sock_write(int conn_fd, short events, void *data)
+{
+	conn_status_t *conn = (conn_status_t *)conn;
+
+	if (!TAILQ_EMPTY(&conn->queue_head)) {
+		tailq_entry *item_now = TAILQ_FIRST(&conn->queue_head), *item_next = NULL;
+		while (item_now != NULL) {
+			recv_buf_t *buffer = item_now->send_item;
+			sctp_msg_t *sctp_msg = (sctp_msg_t *)buffer->buffer;
+
+			struct sctp_sndinfo info = { 
+				.snd_sid = 0, 
+				.snd_flags = 0,
+				.snd_ppid = htonl(sctp_msg->tag.assoc_id),
+				.snd_context = 0,
+				.snd_assoc_id = conn->assoc_id };
+			struct iovec iov = {
+				.iov_base = sctp_msg->msg_body,
+				.iov_len  = sctp_msg->msg_size };
+
+			int send_bytes = sctp_sendv(conn->conns_fd, &iov, 1, NULL, 0, &info, sizeof(info), SCTP_SENDV_SNDINFO, MSG_DONTWAIT);
+			if (send_bytes > 0) {
+				buffer->occupied = 0;
+			} else {
+				return;
+			}
+
+			item_next = TAILQ_NEXT(item_now, items); 
+			free(item_now); 
+			item_now = item_next;
+		}
+	}
+}
+
+void handle_sock_send(int conn_fd, short events, void *data)
+{
+	recv_buf_t *buffer = (recv_buf_t *)data;
+	sctp_msg_t *sctp_msg = (sctp_msg_t *)buffer->buffer;
+
+	sctp_client_t *client = link_node_get_data_by_key(&WORKER_CTX->conn_list, sctp_msg->tag.hostname);
+	if (!client->enable) {
+		goto HSS_FAIL;
+	}
+
+	conn_status_t *target_conn = search_connection(client, sctp_msg);
+	if (target_conn == NULL) {
+		goto HSS_FAIL;
+	}
+
+	tailq_entry *item = malloc(sizeof(tailq_entry));
+	item->send_item = buffer;
+	TAILQ_INSERT_TAIL(&target_conn->queue_head, item, items);
+
+	event_base_once(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, sock_write, target_conn, NULL);
+
+	return;
+
+HSS_FAIL:
+	buffer->occupied = 0;	
+}
+
+void handle_sock_recv(int conn_fd, short events, void *data)
 {
 	(void)events;
 
@@ -60,16 +128,16 @@ RECV_MORE:
 			return;
 		}
 		goto RECV_MORE;
-	} if (recv_bytes < 0 && errno != EAGAIN) {
-
-		/* handle error */
-		fprintf(stderr, "error occured! (%d:%s)\n", errno, strerror(errno));
-		conn_status->assoc_state = -1;
 	} else if (recv_bytes > 0) {
 
 		/* handle recv data */
 		fprintf(stderr, "recv data=[%s]\n", buffer);
 		goto RECV_MORE;
+	} else if (recv_bytes < 0 && errno != EAGAIN) {
+
+		/* handle error */
+		fprintf(stderr, "error occured! (%d:%s)\n", errno, strerror(errno));
+		conn_status->assoc_state = -1;
 	}
 }
 
@@ -96,6 +164,18 @@ void clear_connection(conn_status_t *conn_status)
 		event_free(conn_status->conn_ev);
 		conn_status->conn_ev = NULL;
 	}
+}
+
+conn_status_t *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg)
+{
+	for (int i = 0; i < client->conn_num; i++) {
+		conn_status_t *conn = &client->conn_status[(client->curr_index + i) % client->conn_num];
+		if (sctp_msg->tag.assoc_id > 0 && sctp_msg->tag.assoc_id != conn->assoc_id) continue;
+		if (conn->assoc_state != SCTP_ESTABLISHED) continue;
+		client->curr_index = (i + 1) % client->conn_num;
+		return conn;
+	}
+	return NULL;
 }
 
 void check_connection(worker_ctx_t *worker_ctx)
@@ -128,9 +208,10 @@ void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_clien
 
 	setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_EVENTS, &SCTP_NOTIF_EVENT, sizeof(SCTP_NOTIF_EVENT));
 	setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_INITMSG, &SCTP_INIT_MESSAGE, sizeof(SCTP_INIT_MESSAGE));
+	setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS, &SCTP_PADDR_PARAMS, sizeof(SCTP_PADDR_PARAMS));
 	util_set_linger(conn_status->conns_fd, 1, 0);	/* we use ABORT */
 
-	conn_status->conn_ev = event_new(worker_ctx->evbase_thrd, conn_status->conns_fd, EV_READ|EV_PERSIST, handle_sock_cb, conn_status);
+	conn_status->conn_ev = event_new(worker_ctx->evbase_thrd, conn_status->conns_fd, EV_READ|EV_PERSIST, handle_sock_recv, conn_status);
 	event_add(conn_status->conn_ev, NULL);
 
 	sctp_bindx(conn_status->conns_fd, (struct sockaddr *)client->src_addr, client->src_addr_num, SCTP_BINDX_ADD_ADDR);
@@ -186,7 +267,7 @@ void io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 	}
 }
 
-void thrd_tick(evutil_socket_t fd, short events, void *data)
+void io_thrd_tick(evutil_socket_t fd, short events, void *data)
 {
 	worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
 	check_connection(worker_ctx);
@@ -200,7 +281,7 @@ void *io_worker_thread(void *arg)
 	io_worker_init(WORKER_CTX, MAIN_CTX);
 
 	struct timeval one_sec = {2, 0};
-	struct event *ev_tick = event_new(WORKER_CTX->evbase_thrd, -1, EV_PERSIST, thrd_tick, WORKER_CTX);
+	struct event *ev_tick = event_new(WORKER_CTX->evbase_thrd, -1, EV_PERSIST, io_thrd_tick, WORKER_CTX);
 	event_add(ev_tick, &one_sec);
 
 	event_base_loop(WORKER_CTX->evbase_thrd, EVLOOP_NO_EXIT_ON_EMPTY);

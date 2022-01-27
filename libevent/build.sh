@@ -2,7 +2,7 @@
 
 export ROOTDIR="$(pwd)/../"
 export PKG_CONFIG_PATH=${ROOTDIR}/build/lib/pkgconfig
-LIBNAME="libevent.a"
+LIBNAME="libevent"
 
 if [  -f ${ROOTDIR}/build/lib/${LIBNAME}.a ]; then
 	echo "${LIBNAME} already exist in build/lib"
