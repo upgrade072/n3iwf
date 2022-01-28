@@ -165,18 +165,15 @@ int main()
 	while (1) {
 		sleep (1);
 
-		//int msgsnd(int msqid, const void *msgp, size_t msgsz, int msgflg);
-
 		sctp_msg_t send_msg;
 		send_msg.mtype = 1;
 		memset(&send_msg.tag, 0x00, sizeof(sctp_tag_t));
 		sprintf(send_msg.tag.hostname, "%s", "test_conn_1");
+		send_msg.tag.ppid = 9999;
+		send_msg.tag.stream_id = 1000;
 		sprintf(send_msg.msg_body, "123456");
 		send_msg.msg_size = strlen(send_msg.msg_body);
 
-		int ret = msgsnd(MAIN_CTX->QID_INFO.send_relay, &send_msg, sizeof(sctp_tag_t) + sizeof(int) + sizeof(size_t) + send_msg.msg_size, IPC_NOWAIT);
-		fprintf(stderr, "{dbg} ret=(%d) (%d:%s)\n", ret, errno, strerror(errno));
-
-		//MAIN_CTX->QID_INFO.send_relay
+		//msgsnd(MAIN_CTX->QID_INFO.send_relay, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT);
 	}
 }

@@ -46,15 +46,12 @@ void bf_msgq_read(int fd, short events, void *data)
 		if (buffer == NULL) return;
 
 		/* receive race */
-		buffer->size = msgrcv(MAIN_CTX->QID_INFO.send_relay, buffer->buffer, /*buffer->size */65535 /*TODO*/, 0, IPC_NOWAIT);
+		buffer->size = msgrcv(MAIN_CTX->QID_INFO.send_relay, buffer->buffer, worker_ctx->recv_buff.each_size, 0, IPC_NOWAIT);
 
 		/* find dest-conn status */
 			/* if unabe reply to sender or discard */
 		if (buffer->size <= 0) continue;
-
-		if (buffer->size < (sizeof(sctp_tag_t) + sizeof(int) + sizeof(size_t) + 1)) continue;
-
-		fprintf(stderr, "????\n");
+		if (buffer->size < (SCTP_MSG_INFO_SIZE + 1)) continue;
 
 		/* if set occupied = 1 to slot & relay to io_worker */
 		buffer->occupied = 1;
@@ -66,7 +63,6 @@ void bf_msgq_read(int fd, short events, void *data)
 
 void bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 {
-	fprintf(stderr, "{{{{DBG}}}} %s called!\n", __func__);
     worker_ctx->evbase_thrd = event_base_new();
 
 	struct timeval one_u_sec = {0, 1};
@@ -76,9 +72,7 @@ void bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 
 void bf_thrd_tick(evutil_socket_t fd, short events, void *data)
 {
-    worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
-
-	fprintf(stderr, "%s() called! my_name=[%s]\n", __func__, worker_ctx->thread_name);
+    //worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
 }
 
 void *bf_worker_thread(void *arg)

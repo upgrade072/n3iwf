@@ -36,18 +36,18 @@ static struct sctp_paddrparams SCTP_PADDR_PARAMS = {
 
 void sock_write(int conn_fd, short events, void *data)
 {
-	conn_status_t *conn = (conn_status_t *)conn;
+	conn_status_t *conn = (conn_status_t *)data;
 
 	if (!TAILQ_EMPTY(&conn->queue_head)) {
-		tailq_entry *item_now = TAILQ_FIRST(&conn->queue_head), *item_next = NULL;
-		while (item_now != NULL) {
+		tailq_entry *item_now = NULL;
+		while ((item_now = TAILQ_FIRST(&conn->queue_head))) {
 			recv_buf_t *buffer = item_now->send_item;
 			sctp_msg_t *sctp_msg = (sctp_msg_t *)buffer->buffer;
 
 			struct sctp_sndinfo info = { 
-				.snd_sid = 0, 
+				.snd_sid = sctp_msg->tag.stream_id,
 				.snd_flags = 0,
-				.snd_ppid = htonl(sctp_msg->tag.assoc_id),
+				.snd_ppid = htonl(sctp_msg->tag.ppid),
 				.snd_context = 0,
 				.snd_assoc_id = conn->assoc_id };
 			struct iovec iov = {
@@ -58,12 +58,13 @@ void sock_write(int conn_fd, short events, void *data)
 			if (send_bytes > 0) {
 				buffer->occupied = 0;
 			} else {
+				if (errno != EAGAIN) {
+					fprintf(stderr, "{dbg} %s() error occured (%d:%s)\n", __func__, errno, strerror(errno));
+				}
 				return;
 			}
-
-			item_next = TAILQ_NEXT(item_now, items); 
-			free(item_now); 
-			item_now = item_next;
+			TAILQ_REMOVE(&conn->queue_head, item_now, items);
+			free(item_now);
 		}
 	}
 }
@@ -178,28 +179,65 @@ conn_status_t *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg)
 	return NULL;
 }
 
+void check_path_state(sctp_client_t *client)
+{
+	struct sctp_paddrinfo pinfo;
+	socklen_t optlen = sizeof(pinfo);
+	memset(&pinfo, 0x00, sizeof(struct sctp_paddrinfo));
+
+	char peer_host[NI_MAXHOST] = {0,};
+	char peer_port[NI_MAXSERV] = {0,};
+
+	for (int i = 0; i < client->conn_num; i++) {
+		conn_status_t *conn = &client->conn_status[i];
+		pinfo.spinfo_assoc_id = conn->assoc_id;
+
+		for (int k = 0; k < client->dst_addr_num; k++) {
+			memcpy(&pinfo.spinfo_address, &client->dst_addr[k], sizeof(struct sockaddr_storage));
+
+			int ret = sctp_opt_info(conn->conns_fd, conn->assoc_id, SCTP_GET_PEER_ADDR_INFO, &pinfo, &optlen);
+			if (ret < 0) {
+				fprintf(stderr, "fail to get paddr\n");
+			} else {
+				getnameinfo((struct sockaddr *)&pinfo.spinfo_address, sizeof(struct sockaddr_storage), 
+						peer_host, sizeof(peer_host), peer_port, sizeof(peer_port), NI_NUMERICHOST | NI_NUMERICSERV);
+				fprintf(stderr, "{dbg} %s:%s path_state=(%d)\n", peer_host, peer_port, pinfo.spinfo_state);
+			}
+		}
+	}
+}
+
+void clear_or_reconnect(sctp_client_t *client, worker_ctx_t *worker_ctx)
+{
+	for (int i = 0; i < MAX_SC_CONN_NUM; i++) {
+		if (client->conn_status[i].assoc_state > 0) {
+			if (!client->enable || i >= client->conn_num) {
+				clear_connection(&client->conn_status[i]);
+			} 
+		} else {
+			if (client->enable && i < client->conn_num) {
+				client_new(&client->conn_status[i], worker_ctx, client);
+			}
+		}
+	}
+}
+
 void check_connection(worker_ctx_t *worker_ctx)
 {
 	for (int i = 0; i < link_node_length(&worker_ctx->conn_list); i++) {
 		sctp_client_t *client = link_node_get_nth_data(&worker_ctx->conn_list, i);
-		if (client == NULL) continue;
-
-		for (int k = 0; k < MAX_SC_CONN_NUM; k++) {
-			if (client->conn_status[k].assoc_state > 0) {
-				if (!client->enable || k >= client->conn_num) {
-					clear_connection(&client->conn_status[k]);
-				} 
-			} else {
-				if (client->enable && k < client->conn_num) {
-					client_new(&client->conn_status[k], worker_ctx, client);
-				}
-			}
+		if (client == NULL) {
+			continue;
+		} else {
+			check_path_state(client);
+			clear_or_reconnect(client, worker_ctx);
 		}
 	}
 }
 
 void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client)
 {
+	/* reset connection */
 	clear_connection(conn_status);
 
 	/* ok try reconnect */
