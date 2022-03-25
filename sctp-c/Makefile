@@ -13,8 +13,8 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 SRCS			= main.c list.c io_worker.c bf_worker.c stack.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= sctp_c
-DEST			= ../bin
-CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function
+DEST			= ../BIN
+CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function -std=c99
 
 #---------------------------------------------------------------------
 all:: clean $(AOUT) install

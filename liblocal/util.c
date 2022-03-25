@@ -12,7 +12,11 @@ void util_shell_cmd_apply(char *command, char *res, size_t res_size)
 
 void util_print_msgq_info(int key, int msqid)
 {
+#if 0
 	struct msqid_ds m_stat = {0,};
+#else
+	struct msqid_ds m_stat = {{0,}};
+#endif
 
 	fprintf(stderr, "---------- messege queue info -------------\n");
 	if (msgctl(msqid, IPC_STAT, &m_stat)== -1) {

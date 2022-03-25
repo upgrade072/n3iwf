@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/ipc.h>
@@ -162,6 +160,7 @@ void    init_conn_list(main_ctx_t *MAIN_CTX);
 int     sctp_noti_assoc_change(struct sctp_assoc_change *sac, const char **event_state);
 int     sctp_noti_peer_addr_change(struct sctp_paddr_change *spc, const char **event_state);
 int     handle_sctp_notification(union sctp_notification *notif, size_t notif_len, const char **event_str, const char **event_state);
+char 	*get_path_state_str(int state);
 int     get_assoc_state(int sd, int assoc_id, const char **state_str);
 
 /* ------------------------- bf_worker.c --------------------------- */

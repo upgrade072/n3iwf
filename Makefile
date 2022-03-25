@@ -1,4 +1,4 @@
-SUBDIRS := liblocal libconfig libfort libevent lksctp sctp-c
+SUBDIRS := tools/* liblocal libxml2json2xml ngap_asn sctp-c test
 
 subdirs: $(SUBDIRS)
 

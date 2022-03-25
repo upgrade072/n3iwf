@@ -13,11 +13,7 @@ static struct sctp_event_subscribe SCTP_NOTIF_EVENT = {
 	.sctp_partial_delivery_event = 1,
 	.sctp_adaptation_layer_event = 1,
 	.sctp_authentication_event = 1,
-	.sctp_sender_dry_event = 1,
-	.sctp_stream_reset_event = 1,
-	.sctp_assoc_reset_event = 1,
-	.sctp_stream_change_event = 1,
-	.sctp_send_failure_event_event = 1,
+	.sctp_sender_dry_event = 0, // if send data dry out 
 };
 
 static struct sctp_initmsg SCTP_INIT_MESSAGE = {
@@ -44,17 +40,18 @@ void sock_write(int conn_fd, short events, void *data)
 			recv_buf_t *buffer = item_now->send_item;
 			sctp_msg_t *sctp_msg = (sctp_msg_t *)buffer->buffer;
 
-			struct sctp_sndinfo info = { 
-				.snd_sid = sctp_msg->tag.stream_id,
-				.snd_flags = 0,
-				.snd_ppid = htonl(sctp_msg->tag.ppid),
-				.snd_context = 0,
-				.snd_assoc_id = conn->assoc_id };
-			struct iovec iov = {
-				.iov_base = sctp_msg->msg_body,
-				.iov_len  = sctp_msg->msg_size };
+			struct sctp_sndrcvinfo info = {
+				.sinfo_stream = sctp_msg->tag.stream_id,
+				.sinfo_ssn = 0,
+				.sinfo_flags = 0,
+				.sinfo_ppid = htonl(sctp_msg->tag.ppid),
+				.sinfo_context = 0,
+				.sinfo_timetolive = 0,
+				.sinfo_tsn = 0,
+				.sinfo_cumtsn = 0, 
+				.sinfo_assoc_id = conn->assoc_id };
+			int send_bytes = sctp_send(conn->conns_fd, sctp_msg->msg_body, sctp_msg->msg_size, &info, MSG_DONTWAIT);
 
-			int send_bytes = sctp_sendv(conn->conns_fd, &iov, 1, NULL, 0, &info, sizeof(info), SCTP_SENDV_SNDINFO, MSG_DONTWAIT);
 			if (send_bytes > 0) {
 				buffer->occupied = 0;
 			} else {
@@ -144,6 +141,8 @@ RECV_MORE:
 
 void clear_connection(conn_status_t *conn_status)
 {
+	fprintf(stderr, "{dbg} %s() called!\n", __func__);
+
 	/* clear resource */
 	if (!TAILQ_EMPTY(&conn_status->queue_head)) {
 		tailq_entry *item_now = TAILQ_FIRST(&conn_status->queue_head), *item_next = NULL;
@@ -197,11 +196,11 @@ void check_path_state(sctp_client_t *client)
 
 			int ret = sctp_opt_info(conn->conns_fd, conn->assoc_id, SCTP_GET_PEER_ADDR_INFO, &pinfo, &optlen);
 			if (ret < 0) {
-				fprintf(stderr, "fail to get paddr\n");
+				//fprintf(stderr, "fail to get paddr\n"); // path goaway
 			} else {
 				getnameinfo((struct sockaddr *)&pinfo.spinfo_address, sizeof(struct sockaddr_storage), 
 						peer_host, sizeof(peer_host), peer_port, sizeof(peer_port), NI_NUMERICHOST | NI_NUMERICSERV);
-				fprintf(stderr, "{dbg} %s:%s path_state=(%d)\n", peer_host, peer_port, pinfo.spinfo_state);
+				fprintf(stderr, "{dbg} %s:%s path_state=(%d:%s)\n", peer_host, peer_port, pinfo.spinfo_state, get_path_state_str(pinfo.spinfo_state));
 			}
 		}
 	}
@@ -292,8 +291,6 @@ void create_client(worker_ctx_t *worker_ctx, conn_info_t *conn)
 
 void io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 {
-	worker_ctx->evbase_thrd = event_base_new();
-
 	conn_curr_t *CURR_CONN = take_conn_list(MAIN_CTX);
 
 	for (int i = 0; i < MAX_SC_CONN_LIST; i++) {

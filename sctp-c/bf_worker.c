@@ -37,7 +37,7 @@ void bf_msgq_read(int fd, short events, void *data)
 	worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
 
 	/* check if there exist something to send */
-	struct msqid_ds msgq_stat = {0,};
+	struct msqid_ds msgq_stat = {{0,}};
 	while ((msgctl(MAIN_CTX->QID_INFO.send_relay, IPC_STAT, &msgq_stat) >= 0) 
 			&& (msgq_stat.msg_qnum > 0)) {
 
@@ -63,8 +63,6 @@ void bf_msgq_read(int fd, short events, void *data)
 
 void bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
 {
-    worker_ctx->evbase_thrd = event_base_new();
-
 	struct timeval one_u_sec = {0, 1};
 	struct event *ev_msgq_read = event_new(WORKER_CTX->evbase_thrd, -1, EV_PERSIST, bf_msgq_read, worker_ctx);
 	event_add(ev_msgq_read, &one_u_sec);

@@ -45,9 +45,6 @@ int sctp_noti_peer_addr_change(struct sctp_paddr_change *spc, const char **event
 		case SCTP_ADDR_CONFIRMED:
 			*event_state = "address confirmed";
 			return (0);
-		case SCTP_ADDR_POTENTIALLY_FAILED:
-			*event_state = "address potentially failed";
-			return (0);
 		default:
 			*event_state = "unknwon spc";
 			return (-1);
@@ -63,9 +60,6 @@ int handle_sctp_notification(union sctp_notification *notif, size_t notif_len, c
 	}
 
 	switch (notif->sn_header.sn_type) {
-		case SCTP_DATA_IO_EVENT:
-			*event_str = "sctp_data_io_event";
-			return (0);
 		case SCTP_ASSOC_CHANGE:
 			*event_str = "sctp_assoc_change";
 			return sctp_noti_assoc_change(&notif->sn_assoc_change, event_state);
@@ -93,21 +87,25 @@ int handle_sctp_notification(union sctp_notification *notif, size_t notif_len, c
 		case SCTP_SENDER_DRY_EVENT:
 			*event_str = "sctp_sender_dry_event";
 			return (0);
-		case SCTP_STREAM_RESET_EVENT:
-			*event_str = "sctp_stream_reset_event";
-			return (0);
-		case SCTP_ASSOC_RESET_EVENT:
-			*event_str = "sctp_assoc_reset_event";
-			return (0);
-		case SCTP_STREAM_CHANGE_EVENT:
-			*event_str = "sctp_stream_change_event";
-			return (0);
-		case SCTP_SEND_FAILED_EVENT:
-			*event_str = "sctp_send_failed_event";
-			return (0);
 		default:
 			*event_str = "sctp_unknown_event";
 			return (-1);
+	}
+}
+
+char *get_path_state_str(int state)
+{
+	switch (state) {
+		case SCTP_INACTIVE:
+			return "INACTIVE";
+		case SCTP_PF:
+			return "PF";
+		case SCTP_ACTIVE:
+			return "ACTIVE";
+		case SCTP_UNCONFIRMED:
+			return "UNCONFIRMED";
+		default:
+			return "UNKNOWN";
 	}
 }
 
