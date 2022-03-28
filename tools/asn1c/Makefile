@@ -3,4 +3,4 @@ all:
 	./build.sh
 
 clean:
-	@echo "don't clean before git stable"
+	ls -l | grep ^d | awk '{ print $9 }' | xargs rm -rf

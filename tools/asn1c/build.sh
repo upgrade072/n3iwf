@@ -9,9 +9,12 @@ if [  -f ${ROOTDIR}/build/bin/${LIBNAME} ]; then
     exit
 fi
 
-tar xvf ./asn1c.tar
+if [ ! -d ${LIBNAME} ]; then
+    git clone https://github.com/mouse07410/asn1c.git
+fi
 
 cd asn1c
+git reset --hard 8282f80bc89cc773f9432cde56398a36f2683511^
 
 autoreconf --force --install
 ./configure \
