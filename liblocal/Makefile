@@ -12,11 +12,15 @@ SRCS2			= node.c
 OBJS2			= $(SRCS2:.c=.o)
 AOUT2			= libnode.a
 
+SRCS3			= cfg.c
+OBJS3			= $(SRCS3:.c=.o)
+AOUT3			= libcfg.a
+
 DEST			= ../build
-CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function
+CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function
 
 #---------------------------------------------------------------------
-all:: clean $(AOUT1) $(AOUT2) install
+all:: clean $(AOUT1) $(AOUT2) $(AOUT3) install
 
 .SUFFIXES: .c .o
 .c.o:
@@ -27,6 +31,9 @@ $(AOUT1): $(OBJS1)
 
 $(AOUT2): $(OBJS2)
 	$(AR) -rc $(AOUT2) $(OBJS2)
+
+$(AOUT3): $(OBJS3)
+	$(AR) -rc $(AOUT3) $(OBJS3)
 
 install:
 	\cp ./*.a   $(DEST)/lib

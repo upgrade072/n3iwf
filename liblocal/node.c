@@ -1,4 +1,4 @@
-#include "node.h"
+#include "libnode.h"
 
 link_node *link_node_assign(linked_list *list, size_t alloc_size)
 {
