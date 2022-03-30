@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I../build/include -I../../../include
+BUILD_INC_PATH	= -I../build/include -I../../../include -I../build/include/libxml2 -I../build/share/asn1c
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= 
 
@@ -12,9 +12,9 @@ SRCS2			= node.c
 OBJS2			= $(SRCS2:.c=.o)
 AOUT2			= libnode.a
 
-SRCS3			= cfg.c
+SRCS3			= data.c
 OBJS3			= $(SRCS3:.c=.o)
-AOUT3			= libcfg.a
+AOUT3			= libdata.a
 
 DEST			= ../build
 CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function

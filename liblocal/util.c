@@ -12,11 +12,7 @@ void util_shell_cmd_apply(char *command, char *res, size_t res_size)
 
 void util_print_msgq_info(int key, int msqid)
 {
-#if 0
-	struct msqid_ds m_stat = {0,};
-#else
 	struct msqid_ds m_stat = {{0,}};
-#endif
 
 	fprintf(stderr, "---------- messege queue info -------------\n");
 	if (msgctl(msqid, IPC_STAT, &m_stat)== -1) {
@@ -111,4 +107,69 @@ int util_set_keepalive(int fd, int keepalive, int cnt, int idle, int intvl)
     res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
 
     return res;
+}
+
+void print_byte_bin(unsigned char value, char *ptr, size_t size)
+{
+    if (size % 8 != 1) {
+        fprintf(stderr, "size wrong [need %%8 + 1]\n");
+        return;
+    }
+    int digit_cnt = 0;
+    for (int i = sizeof(char) * 7; i >= 0; i--) {
+        digit_cnt++;
+    }
+    int dummy_cnt = (size - 1) - digit_cnt;
+    for (int i = 0; dummy_cnt > 0 && i < dummy_cnt; i++) {
+        sprintf(ptr + strlen(ptr), "%c", '0');
+    }
+    for (int i = sizeof(char) * 7; i >= 0; i--) {
+        sprintf(ptr + strlen(ptr), "%d", (value & (1 << i)) >> i );
+    }
+}
+
+void print_bcd_str(const char *input, char *output, size_t size)
+{
+    int len = strlen(input);
+    if (size < (len + 1)) {
+        fprintf(stderr, "size wrong [need %d + 1]\n", len);
+        return;
+    }
+    for (int i = 0; i < len; i ++) {
+        int pos = i % 2 == 0 ? i + 1 : i - 1;
+        output[pos] = isdigit(input[i]) ? input[i] : toupper(input[i]);
+    }
+    output[len] = '\0';
+}
+
+char *file_to_buffer(char *filename, const char *mode, size_t *handle_size)
+{
+    FILE *fp = fopen(filename, mode);
+    if (fp == NULL) {
+        fprintf(stderr, "[%s] can't read file=[%s]!\n", __func__, filename);
+        return NULL;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t file_size = *handle_size = ftell(fp);
+    rewind(fp);
+
+    char *buffer = malloc(file_size);
+    fread(buffer, 1, file_size, fp);
+    fclose(fp);
+
+    return buffer; // Must be freed
+}
+
+int buffer_to_file(char *filename, const char *mode, char *buffer, size_t buffer_size, int free_buffer)
+{
+    /* write pdu to file */
+    FILE *fp = fopen(filename, mode);
+    int ret = fwrite(buffer, buffer_size, 1, fp);
+    fclose(fp);
+
+    if (free_buffer)
+        free(buffer);
+
+    return ret;
 }

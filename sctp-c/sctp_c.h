@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include <sys/queue.h>
 
-#include <node.h>
+#include <libnode.h>
 #include <libutil.h>
 
 #include <libconfig.h>

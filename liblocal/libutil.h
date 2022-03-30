@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -12,6 +13,7 @@
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 
 /* ------------------------- util.c --------------------------- */
 void    util_shell_cmd_apply(char *command, char *res, size_t res_size);
@@ -24,3 +26,7 @@ int     util_set_linger(int fd, int onoff, int linger);
 int     util_set_rcvbuffsize(int fd, int byte);
 int     util_set_sndbuffsize(int fd, int byte);
 int     util_set_keepalive(int fd, int keepalive, int cnt, int idle, int intvl);
+void    print_byte_bin(unsigned char value, char *ptr, size_t size);
+void    print_bcd_str(const char *input, char *output, size_t size);
+char    *file_to_buffer(char *filename, const char *mode, size_t *handle_size);
+int     buffer_to_file(char *filename, const char *mode, char *buffer, size_t buffer_size, int free_buffer);
