@@ -2,7 +2,6 @@ build
 bin
 tags
 add.sh
-test
 .scannerwork
 *.tar.gz
 *.tar.xz

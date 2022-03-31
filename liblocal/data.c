@@ -100,7 +100,7 @@ int check_asn_constraints(asn_TYPE_descriptor_t type_desc, const void *sptr, int
     size_t errlen = sizeof(errbuf);
     
     int ret = asn_check_constraints(&type_desc, sptr, errbuf, &errlen);
-    fprintf(stderr, "[%s] Check Constraint for %s, Result: %s Err=(%s)\n", __func__, type_desc.name, ret ? "NOK" : "OK", errbuf);
+    //fprintf(stderr, "[%s] Check Constraint for %s, Result: %s Err=(%s)\n", __func__, type_desc.name, ret ? "NOK" : "OK", errbuf);
     
     if (debug) {
         asn_fprint(stdout, &type_desc, sptr);
@@ -115,7 +115,7 @@ NGAP_PDU_t *decode_pdu_to_ngap_asn(enum asn_transfer_syntax syntax, char *pdu, s
     NGAP_PDU_t *pdu_payload_asn = NULL;
 
     asn_dec_rval_t dc_res = asn_decode(0, syntax, &asn_DEF_NGAP_PDU, (void **)&pdu_payload_asn, pdu, pdu_size);
-    fprintf(stderr, "[%s] Decode %s, bytes=(%ld) rcode=(%d)\n", __func__, dc_res.code == RC_OK ? "OK" : "NOK", dc_res.consumed, dc_res.code);
+    //fprintf(stderr, "[%s] Decode %s, bytes=(%ld) rcode=(%d)\n", __func__, dc_res.code == RC_OK ? "OK" : "NOK", dc_res.consumed, dc_res.code);
 
     if (dc_res.code != RC_OK)
         ASN_STRUCT_FREE(asn_DEF_NGAP_PDU, pdu_payload_asn);
@@ -129,7 +129,7 @@ NGAP_PDU_t *decode_pdu_to_ngap_asn(enum asn_transfer_syntax syntax, char *pdu, s
 char *encode_asn_to_pdu_buffer(enum asn_transfer_syntax syntax, asn_TYPE_descriptor_t type_desc, void *sptr, size_t *encode_size, int free_asn)
 {
     asn_encode_to_new_buffer_result_t encode_res = asn_encode_to_new_buffer(0, syntax, &type_desc, sptr);
-    fprintf(stderr, "[%s] Encode %s, bytes=(%ld)\n", __func__, encode_res.buffer == NULL ? "NOK" : "OK", encode_res.result.encoded);
+    //fprintf(stderr, "[%s] Encode %s, bytes=(%ld)\n", __func__, encode_res.buffer == NULL ? "NOK" : "OK", encode_res.result.encoded);
 
     if (free_asn)
         ASN_STRUCT_FREE(type_desc, sptr);
