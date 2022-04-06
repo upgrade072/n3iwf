@@ -1,4 +1,4 @@
-#include "sctp_c.h"
+#include "sctpc.h"
 
 extern main_ctx_t *MAIN_CTX;
 static __thread worker_ctx_t *WORKER_CTX;

@@ -1,4 +1,4 @@
-#include "sctp_c.h"
+#include "sctpc.h"
 
 conn_curr_t *take_conn_list(main_ctx_t *MAIN_CTX)
 {
@@ -17,10 +17,51 @@ int sort_conn_list(const void *a, const void *b)
 void disp_conn_list(main_ctx_t *MAIN_CTX)
 {
 	conn_curr_t *CURR_CONN = &MAIN_CTX->SHM_SCTPC_CONN->curr_conn[MAIN_CTX->SHM_SCTPC_CONN->curr_pos];
-	for (int i = 0; i < CURR_CONN->rows_num; i++) {
-		conn_info_t *conn = &CURR_CONN->dist_info[i];
-		fprintf(stderr, "{dbg} %s id=(%d) name=(%s)\n", __func__, conn->id, conn->name);
+
+	ft_table_t *table = ft_create_table();
+	ft_set_border_style(table, FT_PLAIN_STYLE);
+	ft_add_separator(table);
+	ft_write_ln(table, "[config]", "[connection]", "[association]");
+	ft_add_separator(table);
+
+	//for (int i = 0; i < CURR_CONN->rows_num; i++) {
+	for (int i = 0; i < MAX_SC_CONN_LIST; i++) {
+		conn_info_t *conn = &CURR_CONN->conn_info[i];
+		if (!conn->occupied) continue;
+
+		ft_table_t *assoc_table = ft_create_table();
+		ft_set_border_style(assoc_table, FT_PLAIN_STYLE);
+		ft_write_ln(assoc_table, "conns_fd", "assoc_id", "assoc_state");
+		ft_add_separator(assoc_table);
+
+		for (int k = 0; k < conn->conn_num; k++) {
+			conn_status_t *conn_status = &conn->conn_status[k];
+			const char *sctp_state = NULL;
+			get_assoc_state(conn_status->conns_fd, conn_status->assoc_id, &sctp_state);
+			ft_printf_ln(assoc_table, "%d|%d|%s", conn_status->conns_fd, conn_status->assoc_id, sctp_state);
+		}
+
+		ft_printf_ln(table, "occupied=(%d)\nid=(%d)\nname=(%s)\nenable=(%d)\nconn_num=(%d)|src_1=(%s)\nsrc_2=(%s)\nsrc_3=(%s)\ndst_1=(%s)\ndst_2=(%s)\ndst_3=(%s)\nsport=(%d)\ndport=(%d)|%s",
+				conn->occupied,
+				conn->id,
+				conn->name,
+				conn->enable,
+				conn->conn_num,
+				conn->src_addr[0],
+				conn->src_addr[1],
+				conn->src_addr[2],
+				conn->dst_addr[0],
+				conn->dst_addr[1],
+				conn->dst_addr[2],
+				conn->sport,
+				conn->dport,
+				ft_to_string(assoc_table));
+		ft_add_separator(table);
+		ft_destroy_table(assoc_table);
 	}
+	ft_add_separator(table);
+	fprintf(stderr, "%s\n", ft_to_string(table));
+	ft_destroy_table(table);
 }
 
 void init_conn_list(main_ctx_t *MAIN_CTX)

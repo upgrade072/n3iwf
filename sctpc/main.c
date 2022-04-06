@@ -1,4 +1,4 @@
-#include "sctp_c.h"
+#include "sctpc.h"
 
 main_ctx_t main_ctx, *MAIN_CTX = &main_ctx;
 
@@ -82,7 +82,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* loading config */
 	config_init(&MAIN_CTX->CFG);
-	if (!config_read_file(&MAIN_CTX->CFG, "./sctp_c.cfg")) {
+	if (!config_read_file(&MAIN_CTX->CFG, "./sctpc.cfg")) {
 		fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
 			__func__,
 			config_error_file(&MAIN_CTX->CFG),
@@ -97,7 +97,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 		config_set_options(&MAIN_CTX->CFG, 0);
 		config_set_tab_width(&MAIN_CTX->CFG, 4);
-		config_write_file(&MAIN_CTX->CFG, "./sctp_c.cfg"); // save cfg with indent
+		config_write_file(&MAIN_CTX->CFG, "./sctpc.cfg"); // save cfg with indent
 	}
 
 	/* create queue_id_info */
@@ -107,13 +107,13 @@ int initialize(main_ctx_t *MAIN_CTX)
 		return (-1);
 	}
 	config_setting_t *conf_recv_relay = config_lookup(&MAIN_CTX->CFG, "queue_id_info.recv_relay");
-	int recv_relay_num = conf_recv_relay == NULL ? 0 : config_setting_length(conf_recv_relay);
-	if (recv_relay_num <= 0) {
+	MAIN_CTX->QID_INFO.recv_relay_num = conf_recv_relay == NULL ? 0 : config_setting_length(conf_recv_relay);
+	if (MAIN_CTX->QID_INFO.recv_relay_num <= 0) {
 		fprintf(stderr, "%s() fatal! queue_id_info.recv_relay not exist!\n", __func__);
 		return (-1);
 	} else {
-		MAIN_CTX->QID_INFO.recv_relay = malloc(sizeof(ppid_pqid_t) * recv_relay_num);
-		for (int i = 0; i < recv_relay_num; i++) {
+		MAIN_CTX->QID_INFO.recv_relay = malloc(sizeof(ppid_pqid_t) * MAIN_CTX->QID_INFO.recv_relay_num);
+		for (int i = 0; i < MAIN_CTX->QID_INFO.recv_relay_num; i++) {
 			config_setting_t *elem = config_setting_get_elem(conf_recv_relay, i);
 			ppid_pqid_t *pqid = &MAIN_CTX->QID_INFO.recv_relay[i];
 			config_setting_lookup_int(elem, "sctp_ppid", &pqid->sctp_ppid);
@@ -154,15 +154,18 @@ int main()
 {
 	evthread_use_pthreads();
 
+	/* create main */
+	MAIN_CTX->evbase_main = event_base_new();
+
 	if (initialize(MAIN_CTX) < 0) {
 		exit(0);
 	}
 
-	/* create main */
-	MAIN_CTX->evbase_main = event_base_new();
-
 	// todo ... //
 	while (1) {
+		disp_conn_list(MAIN_CTX);
+		sleep(1);
+		continue;
 		//sleep (1);
 		usleep (10000);
 

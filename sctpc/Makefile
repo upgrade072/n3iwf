@@ -3,19 +3,19 @@ include ../MakeVars
 BUILD_INC_PATH	= -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
+				  $(BUILD_LIBS_PATH)/libnode.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
+				  $(BUILD_LIBS_PATH)/libfort.a \
+				  $(BUILD_LIBS_PATH)/libsctp.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
-				  $(BUILD_LIBS_PATH)/libtcmalloc_minimal.a \
-				  -lpthread -lrt -lm -ldl -lstdc++
+				  -lpthread -lrt -lm -ldl
 
-SRCS			= main.c
+SRCS			= main.c list.c io_worker.c bf_worker.c stack.c
 OBJS			= $(SRCS:.c=.o)
-AOUT			= dispatcher
+AOUT			= sctpc
 DEST			= ../BIN
-CPUFLAME_FLAG	= -fno-omit-frame-pointer
-TCMALLOC_FLAG	= -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function $(TCMALLOC_FLAG) $(CPUFLAME_FLAG)
+CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function -std=c99
 
 #---------------------------------------------------------------------
 all:: clean $(AOUT) install
@@ -29,6 +29,7 @@ $(AOUT): $(OBJS)
 
 install:
 	\cp $(AOUT) $(DEST)
+	\cp ./sctp_intf.h ../build/include
 
 clean:
 	\rm -f $(OBJS) $(AOUT) core.* 

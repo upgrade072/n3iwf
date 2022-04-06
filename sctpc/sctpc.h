@@ -18,6 +18,7 @@
 #include <libutil.h>
 
 #include <libconfig.h>
+#include <fort.h>
 #include <event.h>
 #include <event2/event.h>
 #include <event2/thread.h>
@@ -69,6 +70,7 @@ typedef struct ppid_pqid_t {
 
 typedef struct qid_info_t {
 	int send_relay;
+	int recv_relay_num;
 	ppid_pqid_t *recv_relay;
 } qid_info_t;
 
@@ -81,6 +83,7 @@ typedef struct conn_status_t {
 	int conns_fd;
 	int assoc_id;
 	int assoc_state;
+	void *sctp_client;
 	struct event *conn_ev;
 	TAILQ_HEAD(, tailq_entry) queue_head;
 } conn_status_t;

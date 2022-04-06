@@ -3,18 +3,19 @@ include ../MakeVars
 BUILD_INC_PATH	= -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
-				  $(BUILD_LIBS_PATH)/libnode.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
-				  $(BUILD_LIBS_PATH)/libsctp.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
-				  -lpthread -lrt -lm -ldl
+				  $(BUILD_LIBS_PATH)/libtcmalloc_minimal.a \
+				  -lpthread -lrt -lm -ldl -lstdc++
 
-SRCS			= main.c list.c io_worker.c bf_worker.c stack.c
+SRCS			= main.c io_worker.c bf_worker.c
 OBJS			= $(SRCS:.c=.o)
-AOUT			= sctp_c
+AOUT			= ngapp
 DEST			= ../BIN
-CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function -std=c99
+CPUFLAME_FLAG	= -fno-omit-frame-pointer
+TCMALLOC_FLAG	= -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function $(TCMALLOC_FLAG) $(CPUFLAME_FLAG)
 
 #---------------------------------------------------------------------
 all:: clean $(AOUT) install

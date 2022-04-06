@@ -1,4 +1,4 @@
-#include "sctp_c.h"
+#include "sctpc.h"
 
 extern main_ctx_t *MAIN_CTX;
 static __thread worker_ctx_t *WORKER_CTX;
@@ -93,6 +93,18 @@ HSS_FAIL:
 	buffer->occupied = 0;	
 }
 
+void relay_msg_to_ppid(sctp_msg_t *send_msg)
+{
+	for (int i = 0; i < MAIN_CTX->QID_INFO.recv_relay_num; i++) {
+		ppid_pqid_t *pqid = MAIN_CTX->QID_INFO.recv_relay;
+		if (pqid->sctp_ppid == send_msg->tag.ppid) {
+			msgsnd(pqid->proc_pqid, send_msg, SCTP_MSG_SIZE(send_msg), IPC_NOWAIT);
+			fprintf(stderr, "{dbg} %s send to msg to proc\n", __func__);
+			return;
+		}
+	}
+}
+
 void handle_sock_recv(int conn_fd, short events, void *data)
 {
 	(void)events;
@@ -100,15 +112,14 @@ void handle_sock_recv(int conn_fd, short events, void *data)
 	conn_status_t *conn_status = (conn_status_t *)data;
 
 	struct sctp_sndrcvinfo sinfo = {0,};
-	char buffer[65536] = {0,};
+	sctp_msg_t msg = {0,}; char *buffer = msg.msg_body;
 	struct sockaddr from = {0,};
 	socklen_t from_len = sizeof(from);
-	int recv_bytes = 0;
-	int msg_flags = 0;
+	int recv_bytes = 0; int msg_flags = 0;
 
 RECV_MORE:
 	msg_flags = 0 | MSG_DONTWAIT;
-	recv_bytes = sctp_recvmsg(conn_fd, buffer, 65536, &from, &from_len, &sinfo, &msg_flags);
+	recv_bytes = msg.msg_size = sctp_recvmsg(conn_fd, buffer, MAX_SCTP_BUFF_SIZE, &from, &from_len, &sinfo, &msg_flags);
 
 	if (msg_flags & MSG_NOTIFICATION) {
 
@@ -129,7 +140,15 @@ RECV_MORE:
 	} else if (recv_bytes > 0) {
 
 		/* handle recv data */
-		fprintf(stderr, "recv data=[%s]\n", buffer);
+		sctp_client_t *client = conn_status->sctp_client;
+		msg.mtype = SCTP_MSG_RECV;
+		sprintf(msg.tag.hostname, "%s", client->name);
+		msg.tag.assoc_id = sinfo.sinfo_assoc_id;
+		msg.tag.stream_id = sinfo.sinfo_stream;
+		msg.tag.ppid = ntohl(sinfo.sinfo_ppid);
+
+		relay_msg_to_ppid(&msg);
+
 		goto RECV_MORE;
 	} else if (recv_bytes < 0 && errno != EAGAIN) {
 
@@ -223,14 +242,27 @@ void clear_or_reconnect(sctp_client_t *client, worker_ctx_t *worker_ctx)
 
 void check_connection(worker_ctx_t *worker_ctx)
 {
+	conn_curr_t *CURR_CONN = take_conn_list(MAIN_CTX);
+
 	for (int i = 0; i < link_node_length(&worker_ctx->conn_list); i++) {
 		sctp_client_t *client = link_node_get_nth_data(&worker_ctx->conn_list, i);
 		if (client == NULL) {
 			continue;
-		} else {
-			check_path_state(client);
-			clear_or_reconnect(client, worker_ctx);
 		}
+
+		/* publish conn status to SHM */
+		for (int k = 0; k < MAX_SC_CONN_NUM; k++) {
+			conn_status_t *conn_status = &CURR_CONN->conn_info[client->id].conn_status[k];
+			if (k <= client->conn_num) {
+				conn_status->conns_fd = client->conn_status[k].conns_fd;
+				conn_status->assoc_id = client->conn_status[k].assoc_id;
+				conn_status->assoc_state = client->conn_status[k].assoc_state;
+			} else {
+				memset(conn_status, 0x00, sizeof(conn_status_t));
+			}
+		}
+		check_path_state(client);
+		clear_or_reconnect(client, worker_ctx);
 	}
 }
 
@@ -241,6 +273,7 @@ void client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_clien
 
 	/* ok try reconnect */
 	conn_status->conns_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	conn_status->sctp_client = client;
 	evutil_make_socket_nonblocking(conn_status->conns_fd);
 
 	setsockopt(conn_status->conns_fd, IPPROTO_SCTP, SCTP_EVENTS, &SCTP_NOTIF_EVENT, sizeof(SCTP_NOTIF_EVENT));

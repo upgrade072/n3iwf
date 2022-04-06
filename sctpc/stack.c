@@ -1,4 +1,4 @@
-#include "sctp_c.h"
+#include "sctpc.h"
 
 int sctp_noti_assoc_change(struct sctp_assoc_change *sac, const char **event_state)
 {
