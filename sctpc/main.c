@@ -150,6 +150,23 @@ int initialize(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
+void main_tick(evutil_socket_t fd, short events, void *data)
+{
+	disp_conn_list(MAIN_CTX);
+
+	// test send code
+	sctp_msg_t send_msg;
+	send_msg.mtype = 1;
+	memset(&send_msg.tag, 0x00, sizeof(sctp_tag_t));
+	sprintf(send_msg.tag.hostname, "%s", "amf_test");
+	send_msg.tag.ppid = 60;
+	send_msg.tag.stream_id = 1; // TODO!!! CAUTION
+	sprintf(send_msg.msg_body, "123456");
+	send_msg.msg_size = strlen(send_msg.msg_body);
+
+	msgsnd(MAIN_CTX->QID_INFO.send_relay, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT);
+}
+
 int main()
 {
 	evthread_use_pthreads();
@@ -161,23 +178,11 @@ int main()
 		exit(0);
 	}
 
-	// todo ... //
-	while (1) {
-		disp_conn_list(MAIN_CTX);
-		sleep(1);
-		continue;
-		//sleep (1);
-		usleep (10000);
+    struct timeval one_sec = {1, 0};
+    struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
+    event_add(ev_tick, &one_sec);
 
-		sctp_msg_t send_msg;
-		send_msg.mtype = 1;
-		memset(&send_msg.tag, 0x00, sizeof(sctp_tag_t));
-		sprintf(send_msg.tag.hostname, "%s", "test_conn_1");
-		send_msg.tag.ppid = 9999;
-		send_msg.tag.stream_id = 1; // TODO!!! CAUTION
-		sprintf(send_msg.msg_body, "123456");
-		send_msg.msg_size = strlen(send_msg.msg_body);
+    event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 
-		msgsnd(MAIN_CTX->QID_INFO.send_relay, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT);
-	}
+	return 0;
 }

@@ -30,3 +30,7 @@ void    print_byte_bin(unsigned char value, char *ptr, size_t size);
 void    print_bcd_str(const char *input, char *output, size_t size);
 char    *file_to_buffer(char *filename, const char *mode, size_t *handle_size);
 int     buffer_to_file(char *filename, const char *mode, char *buffer, size_t buffer_size, int free_buffer);
+char    *ipaddr_increaser(char *input_str);
+int     ipaddr_range_calc(char *start, char *end);
+int     ipaddr_range_scan(const char *range, char *start, char *end);
+int     ipaddr_sample();

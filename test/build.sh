@@ -1,0 +1,1 @@
+gcc ./js_test.c -o js_test -I../build/include -I../build/include/libxml2 -I../build/share/asn1c ../build/lib/libutil.a ../build/lib/libjson-c.a ../build/lib/json_macro.a ../build/lib/libconfig.a -std=gnu99

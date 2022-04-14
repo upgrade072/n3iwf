@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <libconfig.h>
+
+#include <json-c/json.h>
+#include <json-c/json_object.h>
+
+#include <libutil.h>
+#include <libdata.h>
+#include <json_macro.h>
+
+typedef struct key_list_t {
+	int depth;
+	json_object *find_obj;
+
+	int key_num;
+	int key_depth;
+	char key_val[12][128];
+} key_list_t;
+
+json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_list_t *key_list)
+{
+	key_list->depth++;
+
+	int leaf = 0, find = 0;
+	char *key_parse = NULL, *key_find = NULL, *key_rest = NULL; 
+
+	/* already find, return immediately */
+	if (key_list->find_obj != NULL) {
+		goto SJOE_RET;
+	}
+	/* token drained out, don't go deeper */
+	key_parse = strdup(key_input);
+	if ((key_find = strtok_r(key_parse, "/", &key_rest)) == NULL) {
+		goto SJOE_RET;
+	}
+	/* check find leaf */
+	if (key_rest == NULL || strlen(key_rest) == 0) {
+		leaf = 1;
+	}
+
+	json_object_object_foreach(input_obj, key, val) {
+		if (!strcmp(key_find, "*")) {
+			if (key_list->key_depth < key_list->depth) {
+				key_list->key_num++;
+			} else if (key_list->key_depth > key_list->depth) {
+				key_list->key_num--;
+			}
+			key_list->key_depth = key_list->depth;
+			sprintf(key_list->key_val[key_list->key_num -1], "%s", key);
+		}
+		if (!strcmp(key_find, "*") || !strcmp(key_find, key)) {
+			find = 1;
+		}
+
+		json_object *obj = json_object_object_get(input_obj, key);
+		if (find && leaf) {
+			key_list->find_obj = obj;
+			goto SJOE_RET;
+		}
+
+		enum json_type o_type = json_object_get_type(obj);
+		if (o_type == json_type_array) {
+			for (int i = 0; i < json_object_array_length(obj); i++) {
+				json_object *elem = json_object_array_get_idx(obj, i);
+				json_type elem_type = json_object_get_type(elem);
+				if (elem_type == json_type_array || elem_type == json_type_object) {
+					search_json_object_ex(elem, key_rest, key_list);
+				}
+			}
+		} else if (o_type == json_type_object) {
+			search_json_object_ex(obj, key_rest, key_list);
+		}
+	}
+
+SJOE_RET:
+	key_list->depth--;
+	if (key_parse) free(key_parse);
+	return key_list->find_obj ? key_list->find_obj : NULL;
+}
+
+int main()
+{
+	size_t read_size = 0;
+	char *js_text = file_to_buffer("./test.json", "r", &read_size);
+	json_object *js_tok = json_tokener_parse(js_text);
+
+	key_list_t key_list = {0,};
+	json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/RAN-UE-NGAP-ID", &key_list);
+	//json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/*/*/*/*/value/RAN-UE-NGAP-ID", &key_list);
+
+	int value = json_object_get_int(js_value);
+	fprintf(stderr, "{dbg} %d (%d)\n", value, key_list.depth);
+
+	for (int i = 0; i < key_list.key_num; i++) {
+		fprintf(stderr, "{dbg} %d %s\n", i, key_list.key_val[i]);
+	}
+
+	json_object_put(js_tok);
+	free(js_text);
+}

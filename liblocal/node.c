@@ -11,11 +11,15 @@ link_node *link_node_assign(linked_list *list, size_t alloc_size)
 		new = list->start;
 		new->next = NULL;
 		new->prev = NULL;
-		new->data = calloc(1, alloc_size);
+		if (alloc_size) {
+			new->data = calloc(1, alloc_size);
+		}
 	} else {
 		link_node *last = list->last;
 		new = calloc(1, sizeof(link_node));
-		new->data = calloc(1, alloc_size);
+		if (alloc_size) {
+			new->data = calloc(1, alloc_size);
+		}
 		last->next = new;
 		new->prev = last;
 		new->next = NULL;
@@ -32,7 +36,9 @@ link_node *link_node_assign_left(linked_list *list, link_node *sibling, size_t a
 	if (list == NULL || sibling == NULL) return NULL;
 
 	link_node *new = calloc(1, sizeof(link_node));
-	new->data = calloc(1, alloc_size);
+	if (alloc_size) {
+		new->data = calloc(1, alloc_size);
+	}
 
 	new->next = sibling;
 	new->prev = sibling->prev;
@@ -55,7 +61,9 @@ link_node *link_node_assign_right(linked_list *list, link_node *sibling, size_t 
 	if (list == NULL || sibling == NULL) return NULL;
 
 	link_node *new = calloc(1, sizeof(link_node));
-	new->data = calloc(1, alloc_size);
+	if (alloc_size) {
+		new->data = calloc(1, alloc_size);
+	}
 
 	new->next = sibling->next;
 	if (new->next != NULL) {
@@ -153,6 +161,7 @@ void link_node_delete_all(linked_list *list, void (*cbfunc_with_node_data)())
 	}
 }
 
+// if alloc_size > 0 create data space. else none it maybe useful when use multiple key
 link_node *link_node_assign_key_order(linked_list *list, const char *key, size_t alloc_size)
 {
 	if (strlen(key) > LN_MAX_KEY_VAL) {
