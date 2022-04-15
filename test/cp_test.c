@@ -12,6 +12,7 @@
 
 #include <libutil.h>
 #include <libdata.h>
+#include <json_macro.h>
 
 /* for ASN.1 NGAP PDU */
 #include <NGAP-PDU.h>

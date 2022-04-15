@@ -18,13 +18,10 @@ int main()
 	json_object *js_tok = json_tokener_parse(js_text);
 
 	key_list_t key_list = {0,};
-	//json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/AMF-UE-NGAP-ID", &key_list);
-	//json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/*/*/*/*/value/RAN-UE-NGAP-ID", &key_list);
 	json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/RAN-UE-NGAP-ID", &key_list);
-	//json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/PDUSessionResourceSetupListSURes/PDUSessionResourceSetupItemSURes/pDUSessionID", &key_list);
 
 	int value = json_object_get_int(js_value);
-	fprintf(stderr, "{dbg} [%s] %d\n", js_value == NULL ? "nil" : "exist", value);
+	fprintf(stderr, "{dbg} [%s] %d depth=(%d)\n", js_value == NULL ? "nil" : "exist", value, key_list.depth);
 
 	for (int i = 0; i < key_list.key_num; i++) {
 		fprintf(stderr, "{dbg} %d %s\n", i, key_list.key_val[i]);

@@ -4,6 +4,7 @@ BUILD_INC_PATH  = -I../build/include -I../build/include/libxml2 -I../build/share
 BUILD_LIBS_PATH = ../build/lib
 BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libjson-c.a \
+				  $(BUILD_LIBS_PATH)/json_macro.a \
 				  $(BUILD_LIBS_PATH)/libxml2.a \
 				  $(BUILD_LIBS_PATH)/libdata.a \
 				  $(BUILD_LIBS_PATH)/libutil.a \

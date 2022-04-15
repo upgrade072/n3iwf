@@ -103,10 +103,6 @@ json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_
     int is_leaf = 0, find = 0;
     char *key_parse = NULL, *key_tok = NULL, *key_rest = NULL;
     
-    /* already find, return immediately */
-    if (key_list->find_obj != NULL) {
-        goto SJOE_RET;
-    }
     /* token drained out, don't go deeper */
     key_parse = strdup(key_input);
     if ((key_tok = strtok_r(key_parse, "/", &key_rest)) == NULL) {
@@ -124,8 +120,10 @@ json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_
             } else if (key_list->key_depth > key_list->depth) {
                 key_list->key_num--;
             }
+			if ((key_list->key_num - 1) < MAX_JS_KEY_NUM) {
+				sprintf(key_list->key_val[key_list->key_num -1], "%s", key);
+			}
             key_list->key_depth = key_list->depth;
-            sprintf(key_list->key_val[key_list->key_num -1], "%s", key);
         }
         if (!strcmp(key_tok, "*") || !strcmp(key_tok, key)) {
             find = 1;
@@ -138,17 +136,21 @@ json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_
         }
         
         enum json_type o_type = json_object_get_type(obj);
-        if (o_type == json_type_array) {
+		if (o_type == json_type_object) {
+			if (search_json_object_ex(obj, key_rest, key_list) != NULL) {
+				goto SJOE_RET;
+			}
+		} else if (o_type == json_type_array) {
             for (int i = 0; i < json_object_array_length(obj); i++) {
                 json_object *elem = json_object_array_get_idx(obj, i);
                 json_type elem_type = json_object_get_type(elem);
-                if (elem_type == json_type_array || elem_type == json_type_object) {
-                    search_json_object_ex(elem, key_rest, key_list);
-                }
-            }
-        } else if (o_type == json_type_object) { 
-            search_json_object_ex(obj, key_rest, key_list);
-        }
+				if (elem_type == json_type_array || elem_type == json_type_object) {
+					if (search_json_object_ex(elem, key_rest, key_list) != NULL) {
+						goto SJOE_RET;
+					}
+				}
+			}
+		}
     }
 
 SJOE_RET:
