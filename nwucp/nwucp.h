@@ -11,6 +11,7 @@
 #include <libutil.h>
 #include <libnode.h>
 #include <json_macro.h>
+#include <ngap_intf.h>
 
 /* for ASN.1 NGAP PDU */
 #include <NGAP-PDU.h>
@@ -20,6 +21,8 @@
 typedef struct amf_ctx_t {
 	char hostname[128];
 	int ng_setup_status;
+	char amf_regi_tm[25];
+	struct event *ev_amf_regi;
 } amf_ctx_t;
 
 typedef struct ue_ctx_t {
@@ -34,8 +37,14 @@ typedef struct ue_info_t {
 	ue_ctx_t *ue_ctx;
 } ue_info_t;
 
+typedef struct qid_info_t {
+	int my_send_queue;
+	int my_recv_queue;
+} qid_info_t;
+
 typedef struct main_ctx_t {
 	config_t CFG;
+	qid_info_t QID_INFO;
 	struct event_base *evbase_main;
 
 	json_object *js_ng_setup_request;
@@ -54,6 +63,8 @@ int     main();
 
 /* ------------------------- amf.c --------------------------- */
 int     create_amf_list(main_ctx_t *MAIN_CTX);
+void    amf_regi(evutil_socket_t fd, short events, void *data);
+void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
 
 /* ------------------------- ue.c --------------------------- */
 int     create_ue_list(main_ctx_t *MAIN_CTX);

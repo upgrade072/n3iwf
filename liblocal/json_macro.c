@@ -121,7 +121,7 @@ json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_
                 key_list->key_num--;
             }
 			if ((key_list->key_num - 1) < MAX_JS_KEY_NUM) {
-				sprintf(key_list->key_val[key_list->key_num -1], "%s", key);
+				snprintf(key_list->key_val[key_list->key_num -1], MAX_JS_KEY_LEN -1, "%s", key);
 			}
             key_list->key_depth = key_list->depth;
         }

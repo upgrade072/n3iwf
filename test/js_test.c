@@ -16,6 +16,7 @@ int main()
 	size_t read_size = 0;
 	char *js_text = file_to_buffer("./test.json", "r", &read_size);
 	json_object *js_tok = json_tokener_parse(js_text);
+	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(js_tok));
 
 	key_list_t key_list = {0,};
 	json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/RAN-UE-NGAP-ID", &key_list);

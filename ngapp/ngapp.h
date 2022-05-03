@@ -23,6 +23,7 @@
 #include <event2/thread.h>
 
 #include <sctp_intf.h>
+#include "ngap_intf.h"
 
 typedef struct recv_buf_t {
     int occupied;

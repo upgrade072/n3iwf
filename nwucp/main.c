@@ -46,12 +46,28 @@ int create_n3iwf_profile(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
+int create_qid_info(main_ctx_t *MAIN_CTX)
+{
+	int queue_key = 0;
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.my_send_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.my_send_queue = util_get_queue_info(queue_key, "my_send_queue")) < 0) {
+		return (-1);
+	}
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.my_recv_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.my_recv_queue = util_get_queue_info(queue_key, "my_recv_queue")) < 0) {
+		return (-1);
+	}
+
+	return (0);
+}
+
 int initialize(main_ctx_t *MAIN_CTX)
 {
 	if ((load_config(&MAIN_CTX->CFG) < 0) || 
 		(create_n3iwf_profile(MAIN_CTX) < 0) ||
 		(create_amf_list(MAIN_CTX) < 0) ||
-		(create_ue_list(MAIN_CTX) < 0)) {
+		(create_ue_list(MAIN_CTX) < 0) || 
+		(create_qid_info(MAIN_CTX) < 0)) {
 		return (-1);
 	}
 

@@ -2,8 +2,8 @@
 
 int create_ue_list(main_ctx_t *MAIN_CTX)
 {
-	config_setting_t *cfg_ip_range = config_lookup(&MAIN_CTX->CFG, "n3iwf_info.ip_range");
-	const char *ip_range = config_setting_get_string(cfg_ip_range);
+	config_setting_t *cfg_ue_ip_range = config_lookup(&MAIN_CTX->CFG, "n3iwf_info.ue_ip_range");
+	const char *ip_range = config_setting_get_string(cfg_ue_ip_range);
 
 	char ip_start[256] = {0,}, ip_end[256] = {0,};
 	int ret = (ipaddr_range_scan(ip_range, ip_start, ip_end));

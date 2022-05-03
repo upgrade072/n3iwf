@@ -16,15 +16,28 @@ recv_buf_t *find_empty_recv_buffer(worker_ctx_t *worker_ctx)
     return NULL;
 }
 
-int relay_to_io_worker(recv_buf_t *buffer, main_ctx_t *MAIN_CTX)
+int relay_to_io_worker(recv_buf_t *buffer, main_ctx_t *MAIN_CTX, int from)
 {
+	if (from == NGAP_FROM_APP) {
+		ngap_msg_t *ngap_msg = (ngap_msg_t *)buffer->buffer;
+		fprintf(stderr, "{dbg} %s mtype=(%ld) msg_size=(%ld) body=(%s)\n",
+				__func__, ngap_msg->mtype, ngap_msg->msg_size, ngap_msg->msg_body);
+
+	} else if (from == NGAP_FROM_SCTP) {
+	} else {
+		buffer->occupied = 0;
+		return (-1);
+	}
 	return (-1);
 }
 
+/* from SCTP or from NWUCP */
 void bf_msgq_read(int fd, short events, void *data)
 {
     worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
+	int FROM = MAIN_CTX->QID_INFO.ngap_recv_qid ? NGAP_FROM_APP : NGAP_FROM_SCTP;
 	int QID = worker_ctx->thread_index == 0 ? MAIN_CTX->QID_INFO.ngap_recv_qid : MAIN_CTX->QID_INFO.sctp_recv_qid;
+	size_t MSG_INFO_SIZE = worker_ctx->thread_index == 0 ? NGAP_MSG_INFO_SIZE : SCTP_MSG_INFO_SIZE;
 
     /* check if there exist something to send */
     struct msqid_ds msgq_stat = {{0,}};
@@ -33,18 +46,21 @@ void bf_msgq_read(int fd, short events, void *data)
 
         /* find empty slot */
         recv_buf_t *buffer = find_empty_recv_buffer(worker_ctx);
-        if (buffer == NULL) return;
+        if (buffer == NULL) {
+			fprintf(stderr, "{dbg} oops (%s) thrd=[%s] can't find emtpy slot!\n", __func__, worker_ctx->thread_name);
+			return;
+		}
 
         buffer->size = msgrcv(QID, buffer->buffer, worker_ctx->recv_buff.each_size, 0, IPC_NOWAIT);
 
         /* find dest-conn status */
             /* if unabe reply to sender or discard */
         if (buffer->size <= 0) continue;
-        if (buffer->size < (SCTP_MSG_INFO_SIZE + 1)) continue;
+        if (buffer->size < (MSG_INFO_SIZE + 1)) continue;
 
         /* if set occupied = 1 to slot & relay to io_worker */
         buffer->occupied = 1;
-        if (relay_to_io_worker(buffer, MAIN_CTX) < 0) {
+        if (relay_to_io_worker(buffer, MAIN_CTX, FROM) < 0) {
             buffer->occupied = 0;
         }
     }

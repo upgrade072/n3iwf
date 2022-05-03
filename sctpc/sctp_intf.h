@@ -1,3 +1,6 @@
+#ifndef __SCTP_INTF_H__
+#define __SCTP_INTF_H__
+
 typedef struct sctp_tag_t {
 	char hostname[64];
 	int  assoc_id;
@@ -20,3 +23,5 @@ typedef enum sctp_msg_type_t {
 	SCTP_MSG_RECV,
 	SCTP_MSG_SEND,
 } sctp_msg_type_t;
+
+#endif /* __SCTP_INTF_H__ */

@@ -29,6 +29,7 @@ $(AOUT): $(OBJS)
 
 install:
 	\cp $(AOUT) $(DEST)
+	\cp ./ngap_intf.h ../build/include
 
 clean:
 	\rm -f $(OBJS) $(AOUT) core.* 

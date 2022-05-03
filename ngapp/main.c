@@ -99,15 +99,15 @@ int initialize(main_ctx_t *MAIN_CTX)
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngap_send_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.ngap_recv_qid = util_get_queue_info(queue_key, "ngap_send")) < 0) {
+	if ((MAIN_CTX->QID_INFO.ngap_send_qid = util_get_queue_info(queue_key, "ngap_send")) < 0) {
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctp_recv_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.ngap_recv_qid = util_get_queue_info(queue_key, "sctp_recv")) < 0) {
+	if ((MAIN_CTX->QID_INFO.sctp_recv_qid = util_get_queue_info(queue_key, "sctp_recv")) < 0) {
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctp_send_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.ngap_recv_qid = util_get_queue_info(queue_key, "sctp_send")) < 0) {
+	if ((MAIN_CTX->QID_INFO.sctp_send_qid = util_get_queue_info(queue_key, "sctp_send")) < 0) {
 		return (-1);
 	}
 
