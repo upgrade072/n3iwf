@@ -9,8 +9,8 @@ int check_asn_constraints(asn_TYPE_descriptor_t type_desc, const void *sptr, int
     //fprintf(stderr, "[%s] Check Constraint for %s, Result: %s Err=(%s)\n", __func__, type_desc.name, ret ? "NOK" : "OK", errbuf);
     
     if (debug) {
-        asn_fprint(stdout, &type_desc, sptr);
-        xer_fprint(stdout, &type_desc, sptr);
+        asn_fprint(stderr, &type_desc, sptr);
+        //xer_fprint(stderr, &type_desc, sptr);
     }
     
     return ret;
@@ -26,8 +26,10 @@ NGAP_PDU_t *decode_pdu_to_ngap_asn(enum asn_transfer_syntax syntax, char *pdu, s
     if (dc_res.code != RC_OK)
         ASN_STRUCT_FREE(asn_DEF_NGAP_PDU, pdu_payload_asn);
 
-    if (free_pdu)
+    if (free_pdu) {
         free(pdu);
+		pdu = NULL;
+	}
 
     return dc_res.code != RC_OK ? NULL : pdu_payload_asn;
 }
@@ -37,8 +39,10 @@ char *encode_asn_to_pdu_buffer(enum asn_transfer_syntax syntax, asn_TYPE_descrip
     asn_encode_to_new_buffer_result_t encode_res = asn_encode_to_new_buffer(0, syntax, &type_desc, sptr);
     //fprintf(stderr, "[%s] Encode %s, bytes=(%ld)\n", __func__, encode_res.buffer == NULL ? "NOK" : "OK", encode_res.result.encoded);
 
-    if (free_asn)
+    if (free_asn) {
         ASN_STRUCT_FREE(type_desc, sptr);
+		sptr = NULL;
+	}
 
     *encode_size = encode_res.result.encoded;
 
@@ -55,10 +59,10 @@ json_object *convert_xml_to_jobj(char *xml_string, size_t xml_size, asn_TYPE_des
 
     xmlFreeDoc(xml_doc); // free include xmlNode
 
-    fprintf(stderr, "%s\n", JSON_PRINT(jobj));
-
-    if (free_xml)
+    if (free_xml) {
         free(xml_string);
+		xml_string = NULL;
+	}
 
     return jobj;
 }
@@ -74,8 +78,10 @@ xmlBuffer *convert_json_to_xml(json_object *jobj, const char *pdu_name, size_t *
 
     xmlFreeNode(xml_node);
 
-    if (free_jobj)
+    if (free_jobj) {
         json_object_put(jobj);
+		jobj = NULL;
+	}
 
     *encoded_size = xml_size;
 

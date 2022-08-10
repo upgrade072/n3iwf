@@ -4,6 +4,7 @@
 #include <json_macro.h>
 #include <sctp_intf.h>
 
+#define SCTP_PPID_NGAP	60
 typedef enum ngap_from_t {
 	NGAP_FROM_NONE = 0,
 	NGAP_FROM_APP,

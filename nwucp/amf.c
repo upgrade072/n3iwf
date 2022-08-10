@@ -34,6 +34,8 @@ void amf_regi(evutil_socket_t fd, short events, void *data)
 
 	ngap_msg_t msg = { .mtype = 1, }, *ngap_msg = &msg;
 	sprintf(ngap_msg->sctp_tag.hostname, "%s", amf_ctx->hostname);
+	ngap_msg->sctp_tag.stream_id = 0;
+	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
 	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(MAIN_CTX->js_ng_setup_request));
 
 	int res = msgsnd(MAIN_CTX->QID_INFO.my_send_queue, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);

@@ -111,6 +111,17 @@ int initialize(main_ctx_t *MAIN_CTX)
 		return (-1);
 	}
 
+	/* create distr info */
+	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0) {
+		return (-1);
+	}
+	if (config_lookup_string(&MAIN_CTX->CFG, "ngap_distr.worker_rule", &MAIN_CTX->DISTR_INFO.worker_rule) < 0) {
+		return (-1);
+	}
+	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.default_type", &MAIN_CTX->DISTR_INFO.default_type) < 0) {
+		return (-1);
+	}
+
 	/* create io workers */
 	config_lookup_int(&MAIN_CTX->CFG, "process_config.io_worker_num", &MAIN_CTX->IO_WORKERS.worker_num);
 	if (create_worker_thread(&MAIN_CTX->IO_WORKERS, "io_worker", MAIN_CTX) < 0) {

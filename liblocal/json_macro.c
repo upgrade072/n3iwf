@@ -96,7 +96,7 @@ SJO_ERR:
 }
 
 // json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/AMF-UE-NGAP-ID", &key_list);
-json_object *search_json_object_ex(json_object *input_obj, char *key_input, key_list_t *key_list)
+json_object *search_json_object_ex(json_object *input_obj, const char *key_input, key_list_t *key_list)
 {   
     key_list->depth++;
     

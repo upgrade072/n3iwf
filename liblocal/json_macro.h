@@ -28,5 +28,5 @@ typedef struct key_list_t {
 int     cnvt_cfg_to_json(json_object *obj, config_setting_t *setting, int callerType);
 int     check_number(char *ptr);
 json_object     *search_json_object(json_object *obj, char *key_string);
-json_object     *search_json_object_ex(json_object *input_obj, char *key_input, key_list_t *key_list);
+json_object     *search_json_object_ex(json_object *input_obj, const char *key_input, key_list_t *key_list);
 #endif /* __JSON_MACRO_H__ */

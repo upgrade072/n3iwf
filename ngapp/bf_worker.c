@@ -2,6 +2,13 @@
 
 extern main_ctx_t *MAIN_CTX;
 static __thread worker_ctx_t *WORKER_CTX;
+static __thread int IO_WORKER_SELECT;
+
+int select_io_worker_index()
+{
+	IO_WORKER_SELECT = (IO_WORKER_SELECT + 1) % MAIN_CTX->IO_WORKERS.worker_num;
+	return IO_WORKER_SELECT;
+}
 
 recv_buf_t *find_empty_recv_buffer(worker_ctx_t *worker_ctx)
 {
@@ -19,11 +26,11 @@ recv_buf_t *find_empty_recv_buffer(worker_ctx_t *worker_ctx)
 int relay_to_io_worker(recv_buf_t *buffer, main_ctx_t *MAIN_CTX, int from)
 {
 	if (from == NGAP_FROM_APP) {
-		ngap_msg_t *ngap_msg = (ngap_msg_t *)buffer->buffer;
-		fprintf(stderr, "{dbg} %s mtype=(%ld) msg_size=(%ld) body=(%s)\n",
-				__func__, ngap_msg->mtype, ngap_msg->msg_size, ngap_msg->msg_body);
-
+		worker_ctx_t *io_worker = &MAIN_CTX->IO_WORKERS.workers[select_io_worker_index()];
+		return event_base_once(io_worker->evbase_thrd, -1, EV_TIMEOUT, handle_ngap_send, buffer, NULL);
 	} else if (from == NGAP_FROM_SCTP) {
+		worker_ctx_t *io_worker = &MAIN_CTX->IO_WORKERS.workers[select_io_worker_index()];
+		return event_base_once(io_worker->evbase_thrd, -1, EV_TIMEOUT, handle_ngap_recv, buffer, NULL);
 	} else {
 		buffer->occupied = 0;
 		return (-1);
@@ -35,7 +42,7 @@ int relay_to_io_worker(recv_buf_t *buffer, main_ctx_t *MAIN_CTX, int from)
 void bf_msgq_read(int fd, short events, void *data)
 {
     worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
-	int FROM = MAIN_CTX->QID_INFO.ngap_recv_qid ? NGAP_FROM_APP : NGAP_FROM_SCTP;
+	int FROM = worker_ctx->thread_index == 0 ? NGAP_FROM_APP : NGAP_FROM_SCTP;
 	int QID = worker_ctx->thread_index == 0 ? MAIN_CTX->QID_INFO.ngap_recv_qid : MAIN_CTX->QID_INFO.sctp_recv_qid;
 	size_t MSG_INFO_SIZE = worker_ctx->thread_index == 0 ? NGAP_MSG_INFO_SIZE : SCTP_MSG_INFO_SIZE;
 
