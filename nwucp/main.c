@@ -49,12 +49,12 @@ int create_n3iwf_profile(main_ctx_t *MAIN_CTX)
 int create_qid_info(main_ctx_t *MAIN_CTX)
 {
 	int queue_key = 0;
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.my_send_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.my_send_queue = util_get_queue_info(queue_key, "my_send_queue")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_nwucp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.ngapp_nwucp_qid = util_get_queue_info(queue_key, "ngapp_nwucp_queue")) < 0) {
 		return (-1);
 	}
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.my_recv_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.my_recv_queue = util_get_queue_info(queue_key, "my_recv_queue")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_ngapp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.nwucp_ngapp_qid = util_get_queue_info(queue_key, "nwucp_ngapp_queue")) < 0) {
 		return (-1);
 	}
 
@@ -76,7 +76,45 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 void main_tick(evutil_socket_t fd, short events, void *data)
 {
-	fprintf(stderr, "%s called!\n", __func__);
+	//fprintf(stderr, "%s called!\n", __func__);
+}
+
+void handle_ngap_msg(ngap_msg_t *ngap_msg)
+{
+	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
+	fprintf(stderr, "{dbg} from sctp [h:%s a:%d s:%d p:%d]\n", 
+			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid);
+
+	key_list_t *key_list = &ngap_msg->ngap_tag.key_list;
+	memset(key_list, 0x00, sizeof(key_list_t));
+
+	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
+	json_object *js_msg_key = search_json_object_ex(js_ngap_pdu, "/NGAP-PDU/*/value/*/protocolIEs", key_list);
+
+	if (js_ngap_pdu != NULL && js_msg_key != NULL &&
+			key_list->key_num >= 2) { 
+		/* ex) [successfulOutcome] [NGSetupResponse] */
+		int success = !strcmp(key_list->key_val[0], "successfulOutcome") ? true : false;
+		const char *pdu_msg = key_list->key_val[1];
+
+		if (!strcmp(pdu_msg, "NGSetupResponse")) {
+			return amf_regi_res_handle(sctp_tag, success, js_ngap_pdu);
+		}
+	}
+
+	/* we can't handle, just discard */
+	if (js_ngap_pdu != NULL) {
+		json_object_put(js_ngap_pdu);
+	}
+}
+
+void main_msg_rcv(evutil_socket_t fd, short events, void *data)
+{
+	ngap_msg_t msg = {0,}, *ngap_msg = &msg;
+
+	while (msgrcv(MAIN_CTX->QID_INFO.ngapp_nwucp_qid, ngap_msg, sizeof(ngap_msg_t), 0, IPC_NOWAIT) > 0) {
+		handle_ngap_msg(ngap_msg);
+	}
 }
 
 int main()
@@ -92,6 +130,10 @@ int main()
     struct timeval one_sec = {1, 0};
     struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
     event_add(ev_tick, &one_sec);
+
+    struct timeval u_sec = {0, 1};
+    struct event *ev_msg_rcv = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_msg_rcv, NULL);
+    event_add(ev_msg_rcv, &u_sec);
 
 	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 

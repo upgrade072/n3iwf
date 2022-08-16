@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,7 @@ typedef struct amf_ctx_t {
 	int ng_setup_status;
 	char amf_regi_tm[25];
 	struct event *ev_amf_regi;
+	json_object  *js_amf_data;
 } amf_ctx_t;
 
 typedef struct ue_ctx_t {
@@ -38,8 +40,8 @@ typedef struct ue_info_t {
 } ue_info_t;
 
 typedef struct qid_info_t {
-	int my_send_queue;
-	int my_recv_queue;
+	int ngapp_nwucp_qid;
+	int nwucp_ngapp_qid;
 } qid_info_t;
 
 typedef struct main_ctx_t {
@@ -52,19 +54,24 @@ typedef struct main_ctx_t {
 	ue_info_t ue_info;
 } main_ctx_t;
 
-/* ------------------------- ngap.c --------------------------- */
-json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
-
 /* ------------------------- main.c --------------------------- */
 int     load_config(config_t *CFG);
 int     create_n3iwf_profile(main_ctx_t *MAIN_CTX);
+int     create_qid_info(main_ctx_t *MAIN_CTX);
 int     initialize(main_ctx_t *MAIN_CTX);
+void    main_tick(evutil_socket_t fd, short events, void *data);
+void    handle_ngap_msg(ngap_msg_t *ngap_msg);
+void    main_msg_rcv(evutil_socket_t fd, short events, void *data);
 int     main();
+
+/* ------------------------- ue.c --------------------------- */
+int     create_ue_list(main_ctx_t *MAIN_CTX);
 
 /* ------------------------- amf.c --------------------------- */
 int     create_amf_list(main_ctx_t *MAIN_CTX);
 void    amf_regi(evutil_socket_t fd, short events, void *data);
 void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
+void    amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_ngap_pdu);
 
-/* ------------------------- ue.c --------------------------- */
-int     create_ue_list(main_ctx_t *MAIN_CTX);
+/* ------------------------- ngap.c --------------------------- */
+json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);

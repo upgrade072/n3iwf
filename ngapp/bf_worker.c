@@ -43,7 +43,7 @@ void bf_msgq_read(int fd, short events, void *data)
 {
     worker_ctx_t *worker_ctx = (worker_ctx_t *)data;
 	int FROM = worker_ctx->thread_index == 0 ? NGAP_FROM_APP : NGAP_FROM_SCTP;
-	int QID = worker_ctx->thread_index == 0 ? MAIN_CTX->QID_INFO.ngap_recv_qid : MAIN_CTX->QID_INFO.sctp_recv_qid;
+	int QID = worker_ctx->thread_index == 0 ? MAIN_CTX->QID_INFO.nwucp_ngapp_qid : MAIN_CTX->QID_INFO.sctpc_ngapp_qid;
 	size_t MSG_INFO_SIZE = worker_ctx->thread_index == 0 ? NGAP_MSG_INFO_SIZE : SCTP_MSG_INFO_SIZE;
 
     /* check if there exist something to send */

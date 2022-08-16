@@ -94,32 +94,39 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* create queue id info */
 	int queue_key = 0;
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngap_recv_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.ngap_recv_qid = util_get_queue_info(queue_key, "ngap_recv")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_sctpc_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.ngapp_sctpc_qid = util_get_queue_info(queue_key, "ngapp_sctpc_queue")) < 0) {
 		return (-1);
 	}
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngap_send_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.ngap_send_qid = util_get_queue_info(queue_key, "ngap_send")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctpc_ngapp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.sctpc_ngapp_qid = util_get_queue_info(queue_key, "sctpc_ngapp_queue")) < 0) {
 		return (-1);
 	}
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctp_recv_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.sctp_recv_qid = util_get_queue_info(queue_key, "sctp_recv")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_nwucp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.ngapp_nwucp_qid = util_get_queue_info(queue_key, "ngapp_nwucp_queue")) < 0) {
 		return (-1);
 	}
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctp_send_queue", &queue_key);
-	if ((MAIN_CTX->QID_INFO.sctp_send_qid = util_get_queue_info(queue_key, "sctp_send")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_ngapp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.nwucp_ngapp_qid = util_get_queue_info(queue_key, "nwucp_ngapp_queue")) < 0) {
 		return (-1);
 	}
 
 	/* create distr info */
-	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0) {
-		return (-1);
-	}
 	if (config_lookup_string(&MAIN_CTX->CFG, "ngap_distr.worker_rule", &MAIN_CTX->DISTR_INFO.worker_rule) < 0) {
 		return (-1);
 	}
-	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.default_type", &MAIN_CTX->DISTR_INFO.default_type) < 0) {
+	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 || 
+			MAIN_CTX->DISTR_INFO.worker_num > MAX_WORKER_NUM) {
 		return (-1);
+	}
+	int worker_base_qid = 0;
+	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_base_qid", &worker_base_qid) < 0) {
+		return (-1);
+	}
+	for (int i = 0; i < MAIN_CTX->DISTR_INFO.worker_num || i < MAX_WORKER_NUM; i++) {
+		if ((MAIN_CTX->DISTR_INFO.worker_distr_qid[i] = util_get_queue_info(worker_base_qid + i, "worker_distr_qid")) < 0) {
+			return (-1);
+		}
 	}
 
 	/* create io workers */

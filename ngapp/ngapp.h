@@ -36,6 +36,8 @@
 #include <sctp_intf.h>
 #include "ngap_intf.h"
 
+#define MAX_WORKER_NUM      12
+
 typedef struct recv_buf_t {
     int occupied;
     int size;
@@ -52,16 +54,16 @@ typedef struct recv_buff_t {
 } recv_buff_t;
 
 typedef struct qid_info_t {
-	int ngap_recv_qid;
-	int ngap_send_qid;
-	int sctp_recv_qid;
-	int sctp_send_qid;
+	int ngapp_sctpc_qid;
+	int sctpc_ngapp_qid;
+	int ngapp_nwucp_qid;
+	int nwucp_ngapp_qid;
 } qid_info_t;
 
 typedef struct ngap_distr_t {
-	int worker_num;
 	const char *worker_rule;
-	int default_type;
+	int worker_num;
+	int worker_distr_qid[MAX_WORKER_NUM];
 } ngap_distr_t;
 
 typedef struct worker_ctx_t {
@@ -74,7 +76,6 @@ typedef struct worker_ctx_t {
 } worker_ctx_t;
 
 typedef struct worker_thread_t {
-#define MAX_WORKER_NUM      12
 	int worker_num;
 	worker_ctx_t *workers;
 } worker_thread_t;

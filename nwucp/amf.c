@@ -38,8 +38,13 @@ void amf_regi(evutil_socket_t fd, short events, void *data)
 	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
 	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(MAIN_CTX->js_ng_setup_request));
 
-	int res = msgsnd(MAIN_CTX->QID_INFO.my_send_queue, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s msgsnd res=(%d) size=(%ld) (%d:%s) (%ld)\n", __func__, res, ngap_msg->msg_size, errno, strerror(errno), NGAP_MSG_SIZE(ngap_msg));
+	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
+	fprintf(stderr, "{dbg} %s msgsnd res=(%d) size=(%ld) ",  __func__, res, ngap_msg->msg_size);
+	if (res < 0) {
+		fprintf(stderr, "(%d:%s)\n", errno, strerror(errno));
+	} else {
+		fprintf(stderr, "ngap_size=(%ld)\n", NGAP_MSG_SIZE(ngap_msg));
+	}
 }
 
 void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
@@ -55,4 +60,35 @@ void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
 	struct timeval regi_tm = { amf_regi_interval, 0 };
 	amf_ctx->ev_amf_regi = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, amf_regi, amf_ctx);
 	event_add(amf_ctx->ev_amf_regi, &regi_tm);
+}
+
+void amf_ctx_unset(amf_ctx_t *amf_ctx)
+{
+	if (amf_ctx->ev_amf_regi) {
+		event_free(amf_ctx->ev_amf_regi);
+		amf_ctx->ev_amf_regi = NULL;
+	}
+	if (amf_ctx->js_amf_data != NULL) {
+		json_object_put(amf_ctx->js_amf_data);
+		amf_ctx->js_amf_data = NULL;
+	}
+}
+
+void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_ngap_pdu)
+{
+	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
+
+	if (amf_ctx == NULL) {
+		fprintf(stderr, "%s can't find amf_ctx=[hostname:%s]\n", __func__, sctp_tag->hostname);
+		return;
+	}
+	if (success != true) {
+		fprintf(stderr, "%s amf_ctx=[hostname:%s] recv NOK response\n", __func__, sctp_tag->hostname);
+		return;
+	}
+	fprintf(stderr, "%s amf_ctx=[hostname:%s] recv OK response\n", __func__, sctp_tag->hostname);
+
+	amf_ctx_unset(amf_ctx);
+	amf_ctx->js_amf_data = js_ngap_pdu;
+	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(amf_ctx->js_amf_data));
 }

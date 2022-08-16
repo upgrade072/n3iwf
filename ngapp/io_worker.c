@@ -37,9 +37,8 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	memcpy(&send_msg.tag, &ngap_msg->sctp_tag, sizeof(sctp_tag_t));
 	memcpy(&send_msg.msg_body, aper_string, aper_size);
 	send_msg.msg_size = aper_size;
-	if (msgsnd(MAIN_CTX->QID_INFO.sctp_send_qid, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT) < 0) {
-		fprintf(stderr, "{dbg} fail to send res=(%d:%s)\n", errno, strerror(errno));
-	}
+	int res = msgsnd(MAIN_CTX->QID_INFO.ngapp_sctpc_qid, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT);
+	fprintf(stderr, "{dbg} send_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", SCTP_MSG_SIZE(&send_msg), errno, strerror(errno));
 	
 HNS_END:
 	if (js_ngap_pdu) json_object_put(js_ngap_pdu);
@@ -74,18 +73,21 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 		goto HNR_END;
 	}
 
+	/* check distr & decide worker id */
 	key_list_t key_list = {0,};
 	js_distr_key = search_json_object_ex(js_ngap_pdu, MAIN_CTX->DISTR_INFO.worker_rule, &key_list); 
-	int distr_value = js_distr_key == NULL ? MAIN_CTX->DISTR_INFO.default_type : 
-		json_object_get_int(js_distr_key) % MAIN_CTX->DISTR_INFO.worker_num + 1;
+	int DISTR_ID = js_distr_key == NULL ?  -1 : json_object_get_int(js_distr_key);
+	int QID = DISTR_ID < 0 ?  MAIN_CTX->QID_INFO.ngapp_nwucp_qid : MAIN_CTX->DISTR_INFO.worker_distr_qid[DISTR_ID % MAIN_CTX->DISTR_INFO.worker_num];
+	fprintf(stderr, "{DBG} QID=(%d)\n", QID);
 
 	ngap_msg_t recv_msg = { .mtype = 1 };
 	memcpy(&recv_msg.sctp_tag, &sctp_msg->tag, sizeof(sctp_tag_t));
-	recv_msg.ngap_tag.id = distr_value; /* worker id */
+	recv_msg.ngap_tag.id = DISTR_ID;
 	memcpy(&recv_msg.ngap_tag.key_list, &key_list, sizeof(key_list_t));
-	recv_msg.msg_size = sprintf(recv_msg.msg_body, "%s", JS_PRINT_PRETTY(js_ngap_pdu));
+	recv_msg.msg_size = sprintf(recv_msg.msg_body, "%s", JS_PRINT_COMPACT(js_ngap_pdu));
 
-	// TODO ... msg send
+	int res = msgsnd(QID, &recv_msg, NGAP_MSG_SIZE(&recv_msg), IPC_NOWAIT);
+	fprintf(stderr, "{dbg} recv_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", NGAP_MSG_SIZE(&recv_msg), errno, strerror(errno));
 
 HNR_END:
 	if (ngap_pdu) ASN_STRUCT_FREE(asn_DEF_NGAP_PDU, ngap_pdu);
