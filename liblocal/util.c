@@ -174,6 +174,82 @@ int buffer_to_file(char *filename, const char *mode, char *buffer, size_t buffer
     return ret;
 }
 
+void bin_to_hex(char *input, char *output)
+{
+	int len = strlen(input);
+	int mod = (4 - (len % 4)) % 4;
+	char *correct = NULL;
+
+	if (mod) {
+		asprintf(&correct, "%0*d%s", mod, 0, input);
+	} else {
+		asprintf(&correct, "%s", input);
+	}
+
+	for (int i = 0; i < len / 4; i++) {
+		char bin_str[4+1] = {0,};
+		sprintf(bin_str, "%.4s", correct + i*4);
+		int val = strtol(bin_str, NULL, 2);
+		sprintf(output + strlen(output), "%X", val);
+	}
+
+	free(correct);
+}
+
+void hex_to_bin(char *input, char *output)
+{
+	char bin_str[][5] = 
+	{"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111" };
+
+	int len = strlen(input);
+	char *bin_val = NULL;
+
+	for (int i = 0; i < len; i++) {
+		char hex_str = input[i];
+		switch (hex_str) {
+			case '0': bin_val = bin_str[0x0]; break;
+			case '1': bin_val = bin_str[0x1]; break;
+			case '2': bin_val = bin_str[0x2]; break;
+			case '3': bin_val = bin_str[0x3]; break;
+			case '4': bin_val = bin_str[0x4]; break;
+			case '5': bin_val = bin_str[0x5]; break;
+			case '6': bin_val = bin_str[0x6]; break;
+			case '7': bin_val = bin_str[0x7]; break;
+			case '8': bin_val = bin_str[0x8]; break;
+			case '9': bin_val = bin_str[0x9]; break;
+			case 'A': case 'a':bin_val = bin_str[0xa]; break;
+			case 'B': case 'b':bin_val = bin_str[0xb]; break;
+			case 'C': case 'c':bin_val = bin_str[0xc]; break;
+			case 'D': case 'd':bin_val = bin_str[0xd]; break;
+			case 'E': case 'e':bin_val = bin_str[0xe]; break;
+			case 'F': case 'f':bin_val = bin_str[0xf]; break;
+			default: fprintf(stderr, "err) unknown hex=(%c)\n", hex_str); break;
+		}
+		sprintf(output + strlen(output), "%s", bin_val);
+	}
+}
+
+void mem_to_hex(char *input, size_t input_size, char *output)
+{
+	for (int i = 0; i < input_size; i++) {
+		sprintf(output + strlen(output), "%02X", ((unsigned char *)input)[i]);
+	}
+}
+
+void hex_to_mem(char *input, char *output, size_t *output_size)
+{
+	*output_size = 0;
+	char *pos = input;
+	for (int i = 0; i < strlen(input)/2; i++) {
+		unsigned int num = 0;
+		unsigned char val = 0;
+		sscanf(pos, "%02X", &num);
+		val = (char)num;
+		output[(*output_size)++] = val;
+		pos += 2;
+	}
+}
+
 char *ipaddr_increaser(char *input_str)
 {   
 	char class_a[4] = {0,};
