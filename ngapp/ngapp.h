@@ -15,26 +15,22 @@
 #include <sys/queue.h>
 
 #include <libconfig.h>
-#include <json-c/json.h>
-#include <json-c/json_object.h>
-#include <libxml2json2xml.h>
-
 #include <libnode.h>
 #include <libutil.h>
-#include <libdata.h>
+
+#include <json-c/json.h>
+#include <json-c/json_object.h>
 #include <json_macro.h>
 
 #include <event.h>
 #include <event2/event.h>
 #include <event2/thread.h>
 
-/* for ASN.1 NGAP PDU */
-#include <NGAP-PDU.h>
-#include <ProcedureCode.h>
-#include <ProtocolIE-ID.h>
-
 #include <sctp_intf.h>
 #include "ngap_intf.h"
+
+// for NGAP en/decode
+#include <NGAP-PDU-Descriptions.h>
 
 #define MAX_WORKER_NUM      12
 
@@ -87,6 +83,10 @@ typedef struct main_ctx_t {
 	worker_thread_t BF_WORKERS;
 	worker_thread_t IO_WORKERS;
 	struct event_base *evbase_main;
+
+	/* for ngapp asn1 */
+	struct ossGlobal world;
+	int pdu_num;
 } main_ctx_t;
 
 #define MAX_DISTR_BUFF_SIZE 65536

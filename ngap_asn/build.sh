@@ -1,40 +1,23 @@
 #!/bin/bash
 
 export ROOTDIR="${PWD}"
-if [  -f ${ROOTDIR}/../build/lib/libasncodec.a ]; then
-    echo "libasncodec exist"
+if [  -f ${ROOTDIR}/../build/lib/libngap.a ]; then
+    echo "libngap.a exist"
     exit
 fi
 
 set -e
-#export ASN1C_PREFIX=NGAP_ // impact to structure & header file name
-export ASN1C_PREFIX=
+
+sudo cp ${OSSINFO}/ossasn1/linux-x86-64.trial/11.1.0.2/include/*.h ${ROOTDIR}/../build/include
+sudo cp ${OSSINFO}/ossasn1/linux-x86-64.trial/11.1.0.2/lib/*.a ${ROOTDIR}/../build/lib
 
 rm -rf BUILD_DIR
 mkdir BUILD_DIR
 cd BUILD_DIR
-mkdir code
+cp ../ASN_FILES/*.asn ./
 
-../../build/bin/asn1c \
-    -pdu=all \
-    -fcompound-names \
-    -fno-include-deps \
-    -findirect-choice \
-	-gen-autotools \
-	-gen-APER \
-    -D code \
-    ../ASN_FILES/*.asn
-
-#-fwide-types \
-
-autoreconf --force --install
-
-./configure \
-	--prefix=${ROOTDIR}/../build \
-	--enable-static
-
-make -j8
-make install
-
-mkdir -p $(pwd)/../../build/include
-cp code/*h $(pwd)/../../build/include
+asn1 ./*.asn  -nouniquepdu -debug -c -warningMessages -informatoryMessages -per -json -autoencdec
+gcc -c ./NGAP-PDU-Descriptions.c -I${ROOTDIR}/../build/include -DOSSPRINT
+ar rc libngap.a ./NGAP-PDU-Descriptions.o
+cp ./libngap.a ${ROOTDIR}/../build/lib
+cp ./*h ${ROOTDIR}/../build/include

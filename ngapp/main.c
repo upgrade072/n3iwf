@@ -92,6 +92,16 @@ int initialize(main_ctx_t *MAIN_CTX)
         config_write_file(&MAIN_CTX->CFG, "./ngapp.cfg"); // save cfg with indent
     }
 
+	/* create asn1 context */
+	if (ossinit(&MAIN_CTX->world, NGAP_PDU_Descriptions)) {
+		fprintf(stderr, "Error: ossinit()\n");
+		return(-1);
+	} else {
+		ossSetFlags(&MAIN_CTX->world, ossGetFlags(&MAIN_CTX->world) | AUTOMATIC_ENCDEC);
+		ossSetDebugFlags(&MAIN_CTX->world, ossGetDebugFlags(&MAIN_CTX->world));
+		MAIN_CTX->pdu_num = NGAP_PDU_PDU;
+	}
+
 	/* create queue id info */
 	int queue_key = 0;
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_sctpc_queue", &queue_key);

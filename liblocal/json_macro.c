@@ -95,16 +95,24 @@ SJO_ERR:
     return NULL;
 }
 
-// json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/AMF-UE-NGAP-ID", &key_list);
+// search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/AMF-UE-NGAP-ID", &key_list);
+// search_json_object_ex(js_tok, "/initiatingMessage/value/*/{id:121, value}/userLocationInformationN3IWF", &key_list);
 json_object *search_json_object_ex(json_object *input_obj, const char *key_input, key_list_t *key_list)
 {   
+	// err exception 
 	if (input_obj == NULL) return NULL;
 
+	// we dive into deeper
     key_list->depth++;
     
+	// normal find var
     int is_leaf = 0, find = 0;
     char *key_parse = NULL, *key_tok = NULL, *key_rest = NULL;
-    
+
+	// regex find var, for ex) {id:121, value} means find obj that have id:121 and use value object
+	int find_regex = 0;
+	json_object *js_id = NULL, *js_obj = NULL;
+
     /* token drained out, don't go deeper */
     key_parse = strdup(key_input);
     if ((key_tok = strtok_r(key_parse, "/", &key_rest)) == NULL) {
@@ -116,6 +124,7 @@ json_object *search_json_object_ex(json_object *input_obj, const char *key_input
     }
     
     json_object_object_foreach(input_obj, key, val) {
+		/* adjust key_list */
         if (!strcmp(key_tok, "*")) {
             if (key_list->key_depth < key_list->depth) {
                 key_list->key_num++;
@@ -127,25 +136,45 @@ json_object *search_json_object_ex(json_object *input_obj, const char *key_input
 			}
             key_list->key_depth = key_list->depth;
         }
+		/* key * mean any match, key {a:b, c} mean find a:b and use c */
         if (!strcmp(key_tok, "*") || !strcmp(key_tok, key)) {
             find = 1;
-        }
+        } else if (key_tok[0] == '{' && key_tok[strlen(key_tok)-1] == '}') {
+			find_regex = 1;
+			char id[128] = {0,}, val[128] = {0,}, obj[128] = {0,};
+			if (sscanf(key_tok, "{%127[^:]:%127[^,], %127[^}]}", id, val, obj) != 3) {
+				break;
+			}
+			js_id = json_object_object_get(input_obj, id);
+			js_obj = json_object_object_get(input_obj, obj);
+			if (js_id == NULL && js_obj == NULL) {
+				continue;
+			}
+			int js_type = json_object_get_type(js_id);
+			if (((js_type == json_type_string) && (!strcmp(json_object_get_string(js_id), val))) ||
+					((js_type == json_type_int) && (json_object_get_int(js_id) == atoi(val)))) {
+				find = 1;
+			} else {
+				continue;
+			}
+		}
         
-        json_object *obj = json_object_object_get(input_obj, key);
+        json_object *obj = find_regex ? js_obj : json_object_object_get(input_obj, key);
+
         if (find && is_leaf) { 
             key_list->find_obj = obj;
             goto SJOE_RET;
         }
         
-        enum json_type o_type = json_object_get_type(obj);
+		enum json_type o_type = json_object_get_type(obj);
 		if (o_type == json_type_object) {
 			if (search_json_object_ex(obj, key_rest, key_list) != NULL) {
 				goto SJOE_RET;
 			}
 		} else if (o_type == json_type_array) {
-            for (int i = 0; i < json_object_array_length(obj); i++) {
-                json_object *elem = json_object_array_get_idx(obj, i);
-                json_type elem_type = json_object_get_type(elem);
+			for (int i = 0; i < json_object_array_length(obj); i++) {
+				json_object *elem = json_object_array_get_idx(obj, i);
+				json_type elem_type = json_object_get_type(elem);
 				if (elem_type == json_type_array || elem_type == json_type_object) {
 					if (search_json_object_ex(elem, key_rest, key_list) != NULL) {
 						goto SJOE_RET;

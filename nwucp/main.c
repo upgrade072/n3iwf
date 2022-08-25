@@ -85,26 +85,25 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg)
 	fprintf(stderr, "{dbg} from sctp [h:%s a:%d s:%d p:%d]\n", 
 			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid);
 
+	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
+
 	key_list_t *key_list = &ngap_msg->ngap_tag.key_list;
 	memset(key_list, 0x00, sizeof(key_list_t));
 
-	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
-	json_object *js_msg_key = search_json_object_ex(js_ngap_pdu, "/NGAP-PDU/*/value/*/protocolIEs", key_list);
+	int proc_code = json_object_get_int(search_json_object_ex(js_ngap_pdu, "/*/procedureCode", key_list));
+	int success = !strcmp(key_list->key_val[0], "successfulOutcome") ? true : false;
 
-	if (js_ngap_pdu != NULL && js_msg_key != NULL &&
-			key_list->key_num >= 2) { 
-		/* ex) [successfulOutcome] [NGSetupResponse] */
-		int success = !strcmp(key_list->key_val[0], "successfulOutcome") ? true : false;
-		const char *pdu_msg = key_list->key_val[1];
-
-		if (!strcmp(pdu_msg, "NGSetupResponse")) {
+	switch (proc_code)  
+	{
+	/* CAUTION! release js_ngap_pdu in func() */
+		case NGSetupResponse:
 			return amf_regi_res_handle(sctp_tag, success, js_ngap_pdu);
-		}
-	}
-
-	/* we can't handle, just discard */
-	if (js_ngap_pdu != NULL) {
-		json_object_put(js_ngap_pdu);
+		default:
+			/* we can't handle, just discard */
+			if (js_ngap_pdu != NULL) {
+				json_object_put(js_ngap_pdu);
+			}
+			break;
 	}
 }
 

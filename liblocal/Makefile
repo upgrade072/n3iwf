@@ -12,19 +12,15 @@ SRCS2			= node.c
 OBJS2			= $(SRCS2:.c=.o)
 AOUT2			= libnode.a
 
-SRCS3			= data.c
+SRCS3			= json_macro.c
 OBJS3			= $(SRCS3:.c=.o)
-AOUT3			= libdata.a
-
-SRCS4			= json_macro.c
-OBJS4			= $(SRCS4:.c=.o)
-AOUT4			= json_macro.a
+AOUT3			= json_macro.a
 
 DEST			= ../build
 CFLAG			= $(CFLAGS) -std=gnu99 -D_GNU_SOURCE -Wall -Wno-unused-function
 
 #---------------------------------------------------------------------
-all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) install
+all:: clean $(AOUT1) $(AOUT2) $(AOUT3) install
 
 .SUFFIXES: .c .o
 .c.o:
@@ -38,9 +34,6 @@ $(AOUT2): $(OBJS2)
 
 $(AOUT3): $(OBJS3)
 	$(AR) -rc $(AOUT3) $(OBJS3)
-
-$(AOUT4): $(OBJS4)
-	$(AR) -rc $(AOUT4) $(OBJS4)
 
 install:
 	\cp ./*.a   $(DEST)/lib

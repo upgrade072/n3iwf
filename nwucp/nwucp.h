@@ -14,10 +14,9 @@
 #include <json_macro.h>
 #include <ngap_intf.h>
 
-/* for ASN.1 NGAP PDU */
-#include <NGAP-PDU.h>
-#include <ProcedureCode.h>
-#include <ProtocolIE-ID.h>
+typedef enum ngap_msg_enum_t {
+	NGSetupResponse = 21,
+} ngap_msg_enum_t;
 
 typedef struct amf_ctx_t {
 	char hostname[128];

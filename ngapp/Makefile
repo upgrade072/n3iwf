@@ -1,15 +1,13 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I../build/include -I../../../include -I../build/include/libxml2 -I../build/share/asn1c
+BUILD_INC_PATH	= -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
-                  $(BUILD_LIBS_PATH)/libjson-c.a \
-                  $(BUILD_LIBS_PATH)/json_macro.a \
-                  $(BUILD_LIBS_PATH)/libxml2.a \
-                  $(BUILD_LIBS_PATH)/libdata.a \
                   $(BUILD_LIBS_PATH)/libutil.a \
-                  $(BUILD_LIBS_PATH)/libxml2json2xml.a \
-                  $(BUILD_LIBS_PATH)/libasncodec.a \
+				  $(BUILD_LIBS_PATH)/libngap.a \
+				  $(BUILD_LIBS_PATH)/libosstoed.a \
+				  $(BUILD_LIBS_PATH)/json_macro.a \
+				  $(BUILD_LIBS_PATH)/libjson-c.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  $(BUILD_LIBS_PATH)/libtcmalloc_minimal.a \

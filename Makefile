@@ -1,4 +1,5 @@
-SUBDIRS := tools/* libxml2json2xml ngap_asn liblocal sctpc ngapp nwucp test
+#SUBDIRS := tools/* libxml2json2xml ngap_asn liblocal sctpc ngapp nwucp test
+SUBDIRS := tools/* ngap_asn liblocal sctpc ngapp nwucp test
 
 subdirs: $(SUBDIRS)
 
