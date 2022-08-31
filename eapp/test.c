@@ -1,6 +1,6 @@
 #include <eap5g.h>
 
-int main(int argc, char **argv)
+int test()
 {
 	unsigned char buffer[10240] = {0,};
 
@@ -59,4 +59,6 @@ int main(int argc, char **argv)
 	fprintf(stderr, "---------compare--------------------------\n");
 	system("xxd './sample_eap/10b. EAP-Success.bin'");
 	fprintf(stderr, "\n");
+
+	return 0;
 }

@@ -16,8 +16,7 @@ const char nas5gs_msgid_str[][24] = {
 
 const char *establish_cause_str(establishment_cause_t cause)
 {
-	switch (cause)
-	{
+	switch (cause) {
 		case AEC_EMERENGY:
 			return "emergency";
 		case AEC_HIGH_PRIORITY:

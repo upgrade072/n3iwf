@@ -2,9 +2,10 @@ include ../MakeVars
 
 BUILD_INC_PATH	= -I./ -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
-BUILD_LIBS      = $(BUILD_LIBS_PATH)/libutil.a
+BUILD_LIBS      = $(BUILD_LIBS_PATH)/eap5g.a \
+				  $(BUILD_LIBS_PATH)/libutil.a 
 
-SRCS			= main.c eap5g.c
+SRCS			= main.c test.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= eap_test
 DEST			= ../BIN
