@@ -142,7 +142,7 @@ void print_bcd_str(const char *input, char *output, size_t size)
     output[len] = '\0';
 }
 
-char *file_to_buffer(char *filename, const char *mode, size_t *handle_size)
+unsigned char *file_to_buffer(char *filename, const char *mode, size_t *handle_size)
 {
     FILE *fp = fopen(filename, mode);
     if (fp == NULL) {
@@ -154,14 +154,14 @@ char *file_to_buffer(char *filename, const char *mode, size_t *handle_size)
     size_t file_size = *handle_size = ftell(fp);
     rewind(fp);
 
-    char *buffer = malloc(file_size);
+    unsigned char *buffer = malloc(file_size);
     fread(buffer, 1, file_size, fp);
     fclose(fp);
 
     return buffer; // Must be freed
 }
 
-int buffer_to_file(char *filename, const char *mode, char *buffer, size_t buffer_size, int free_buffer)
+int buffer_to_file(char *filename, const char *mode, unsigned char *buffer, size_t buffer_size, int free_buffer)
 {
     /* write pdu to file */
     FILE *fp = fopen(filename, mode);
@@ -229,11 +229,12 @@ void hex_to_bin(char *input, char *output)
 	}
 }
 
-void mem_to_hex(char *input, size_t input_size, char *output)
+void mem_to_hex(unsigned char *input, size_t input_size, char *output)
 {
 	for (int i = 0; i < input_size; i++) {
 		sprintf(output + strlen(output), "%02X", ((unsigned char *)input)[i]);
 	}
+	output[input_size * 2 + 1] = '\0';
 }
 
 void hex_to_mem(char *input, char *output, size_t *output_size)
