@@ -72,7 +72,6 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
 int initialize(main_ctx_t *MAIN_CTX)
 {
 	/* load config */
-	config_init(&MAIN_CTX->CFG);
     config_init(&MAIN_CTX->CFG);
     if (!config_read_file(&MAIN_CTX->CFG, "./ngapp.cfg")) {
         fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
@@ -80,7 +79,6 @@ int initialize(main_ctx_t *MAIN_CTX)
             config_error_file(&MAIN_CTX->CFG),
             config_error_line(&MAIN_CTX->CFG),
             config_error_text(&MAIN_CTX->CFG));
-
         return (-1);
     } else {
         fprintf(stderr, "%s() load cfg ---------------------\n", __func__);

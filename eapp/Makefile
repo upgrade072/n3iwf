@@ -2,12 +2,17 @@ include ../MakeVars
 
 BUILD_INC_PATH	= -I./ -I../build/include -I../../../include
 BUILD_LIBS_PATH	= ../build/lib
-BUILD_LIBS      = $(BUILD_LIBS_PATH)/eap5g.a \
-				  $(BUILD_LIBS_PATH)/libutil.a 
+BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
+				  $(BUILD_LIBS_PATH)/libudp.a \
+				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
+				  $(BUILD_LIBS_PATH)/libevent.a \
+				  $(BUILD_LIBS_PATH)/eap5g.a \
+				  $(BUILD_LIBS_PATH)/libutil.a \
+				  -lpthread -lrt -lm -ldl
 
-SRCS			= main.c test.c
+SRCS			= main.c io_worker.c udp.c comm.c
 OBJS			= $(SRCS:.c=.o)
-AOUT			= eap_test
+AOUT			= eapp
 DEST			= ../BIN
 CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function
 

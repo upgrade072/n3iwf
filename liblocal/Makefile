@@ -20,11 +20,15 @@ SRCS4			= eap5g.c
 OBJS4			= $(SRCS4:.c=.o)
 AOUT4			= eap5g.a
 
+SRCS5			= libudp.c
+OBJS5			= $(SRCS5:.c=.o)
+AOUT5			= libudp.a
+
 DEST			= ../build
 CFLAG			= $(CFLAGS) -std=gnu99 -D_GNU_SOURCE -Wall -Wno-unused-function
 
 #---------------------------------------------------------------------
-all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) install
+all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) $(AOUT5) install
 
 .SUFFIXES: .c .o
 .c.o:
@@ -41,6 +45,9 @@ $(AOUT3): $(OBJS3)
 
 $(AOUT4): $(OBJS4)
 	$(AR) -rc $(AOUT4) $(OBJS4)
+
+$(AOUT5): $(OBJS5)
+	$(AR) -rc $(AOUT5) $(OBJS5)
 
 install:
 	\cp ./*.a   $(DEST)/lib

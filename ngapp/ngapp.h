@@ -34,6 +34,9 @@
 
 #define MAX_WORKER_NUM      12
 
+#define MAX_DISTR_BUFF_SIZE 65536
+#define MAX_DISTR_BUFF_NUM  65536
+
 typedef struct recv_buf_t {
     int occupied;
     int size;
@@ -41,7 +44,6 @@ typedef struct recv_buf_t {
 } recv_buf_t;
 
 typedef struct recv_buff_t {
-#define MAX_DISTR_BUFF_NUM   65536
     int total_num;
     int used_num;
     int each_size;
@@ -88,9 +90,6 @@ typedef struct main_ctx_t {
 	struct ossGlobal world;
 	int pdu_num;
 } main_ctx_t;
-
-#define MAX_DISTR_BUFF_SIZE 65536
-#define MAX_DISTR_BUFF_NUM  65536
 
 /* ------------------------- main.c --------------------------- */
 int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);

@@ -1,6 +1,6 @@
 #include <eap5g.h>
 
-int test()
+int test_eap_endecoding()
 {
 	unsigned char buffer[10240] = {0,};
 

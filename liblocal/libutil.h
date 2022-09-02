@@ -28,7 +28,7 @@ int     util_set_sndbuffsize(int fd, int byte);
 int     util_set_keepalive(int fd, int keepalive, int cnt, int idle, int intvl);
 void    print_byte_bin(unsigned char value, char *ptr, size_t size);
 void    print_bcd_str(const char *input, char *output, size_t size);
-unsigned char    *file_to_buffer(char *filename, const char *mode, size_t *handle_size);
+unsigned        char *file_to_buffer(char *filename, const char *mode, size_t *handle_size);
 int     buffer_to_file(char *filename, const char *mode, unsigned char *buffer, size_t buffer_size, int free_buffer);
 void    bin_to_hex(char *input, char *output);
 void    hex_to_bin(char *input, char *output);

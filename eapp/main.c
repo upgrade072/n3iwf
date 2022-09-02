@@ -1,6 +1,142 @@
 #include <eapp.h>
 
+main_ctx_t main_ctx, *MAIN_CTX = &main_ctx;
+
+int create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
+{
+    config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_size_worker", &worker_ctx->recv_buff.each_size);
+    config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_count_worker", &worker_ctx->recv_buff.total_num);
+    if ((worker_ctx->recv_buff.each_size <= 0 || worker_ctx->recv_buff.each_size > MAX_DISTR_BUFF_SIZE) ||
+        (worker_ctx->recv_buff.total_num <= 0 || worker_ctx->recv_buff.total_num > MAX_DISTR_BUFF_NUM)) {
+        fprintf(stderr, "%s() fatal! process_config.queue_size_at_bf=(%d/max=%d) process_config.queue_count_at_bf=(%d/max=%d)!\n",
+                __func__,
+                worker_ctx->recv_buff.each_size, MAX_DISTR_BUFF_SIZE,
+                worker_ctx->recv_buff.total_num, MAX_DISTR_BUFF_NUM);
+        return (-1);
+    }
+
+    worker_ctx->recv_buff.buffers = malloc(sizeof(recv_buf_t) * worker_ctx->recv_buff.total_num);
+    for (int i = 0; i < worker_ctx->recv_buff.total_num; i++) {
+        recv_buf_t *buffer = &worker_ctx->recv_buff.buffers[i];
+        buffer->occupied = 0;
+        buffer->size = 0;
+        buffer->buffer = malloc(worker_ctx->recv_buff.each_size);
+    }
+
+    return (0);
+}
+
+int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
+{
+    if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
+        fprintf(stderr, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
+        return (-1);
+    }
+
+    WORKER->workers = calloc(1, sizeof(worker_ctx_t) * WORKER->worker_num);
+
+    for (int i = 0; i < WORKER->worker_num; i++) {
+        worker_ctx_t *worker_ctx = &WORKER->workers[i];
+        worker_ctx->thread_index = i;
+        sprintf(worker_ctx->thread_name, "%s_%02d", prefix, i);
+
+        if (create_worker_recv_queue(worker_ctx, MAIN_CTX) < 0) {
+            fprintf(stderr, "%s() fatal! fail to recv queue at worker=[%s]\n", __func__, worker_ctx->thread_name);
+            return (-1);
+        }
+
+        if (pthread_create(&worker_ctx->pthread_id, NULL, io_worker_thread, worker_ctx)) {
+            fprintf(stderr, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
+            return (-1);
+        }
+
+        pthread_setname_np(worker_ctx->pthread_id, worker_ctx->thread_name);
+        fprintf(stderr, "setname=[%s]\n", worker_ctx->thread_name);
+    }
+
+    return 0;
+}
+
+int initialize(main_ctx_t *MAIN_CTX)
+{
+	/* load config */
+	config_init(&MAIN_CTX->CFG);
+	if (!config_read_file(&MAIN_CTX->CFG, "./eapp.cfg")) {
+        fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
+            __func__,
+            config_error_file(&MAIN_CTX->CFG),
+            config_error_line(&MAIN_CTX->CFG),
+            config_error_text(&MAIN_CTX->CFG));
+        return (-1);
+	} else {
+        fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
+        config_write(&MAIN_CTX->CFG, stderr);
+        fprintf(stderr, "===========================================\n");
+
+        config_set_options(&MAIN_CTX->CFG, 0);
+        config_set_tab_width(&MAIN_CTX->CFG, 4);
+        config_write_file(&MAIN_CTX->CFG, "./eapp.cfg"); // save cfg with indent
+	}
+
+	/* udp listen port */
+	if (config_lookup_int(&MAIN_CTX->CFG, "process_config.udp_listen_port", &MAIN_CTX->udp_listen_port) < 0) {
+		return (-1);
+	}
+	if (udpfromto_init((MAIN_CTX->udp_sock = create_udp_sock(MAIN_CTX->udp_listen_port))) < 0) {
+		fprintf(stderr, "%s() fail to create udp sock (port:%d) err(%d:%s)!\n", __func__, MAIN_CTX->udp_listen_port, errno, strerror(errno));
+		return (-1);
+	}
+	fprintf(stderr, "%s() create udp_sock (port:%d fd:%d) success.\n", __func__, MAIN_CTX->udp_listen_port, MAIN_CTX->udp_sock);
+
+	/* main udp buffer queue */
+	config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_size_udp", &MAIN_CTX->udp_buff.each_size);
+	config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_count_udp", &MAIN_CTX->udp_buff.total_num);
+
+	if ((MAIN_CTX->udp_buff.each_size <= 0 || MAIN_CTX->udp_buff.each_size > MAX_DISTR_BUFF_SIZE) || 
+		(MAIN_CTX->udp_buff.total_num <= 0 || MAIN_CTX->udp_buff.total_num > MAX_DISTR_BUFF_NUM)) {
+		fprintf(stderr, "%s() invalid buffer queue_size_udp=(%d) or queue_count_udp=(%d)!\n", 
+				__func__, MAIN_CTX->udp_buff.each_size, MAIN_CTX->udp_buff.total_num);
+		return (-1);
+	} else {
+		MAIN_CTX->udp_buff.buffers = malloc(sizeof(recv_buf_t) * MAIN_CTX->udp_buff.total_num);
+		for (int i = 0; i < MAIN_CTX->udp_buff.total_num; i++) {
+			recv_buf_t *buffer = &MAIN_CTX->udp_buff.buffers[i];
+			buffer->occupied = 0;
+			buffer->size = 0;
+			buffer->buffer = malloc(MAIN_CTX->udp_buff.each_size);
+		}
+	}
+
+	/* io worker thread create */
+	config_lookup_int(&MAIN_CTX->CFG, "process_config.io_worker_num", &MAIN_CTX->IO_WORKERS.worker_num);
+	if (create_worker_thread(&MAIN_CTX->IO_WORKERS, "io_worker", MAIN_CTX) < 0) {
+		return (-1);
+	}
+
+	/* all success */
+	return 0;
+}
+
 int main()
 {
-	test();
+	evthread_use_pthreads();
+
+	MAIN_CTX->evbase_main = event_base_new();
+
+	if (initialize(MAIN_CTX) < 0) {
+		exit(0);
+	}
+
+	/* udp read -> worker~RR */
+	struct event *ev_udp_read = event_new(MAIN_CTX->evbase_main, MAIN_CTX->udp_sock, EV_READ | EV_PERSIST, udp_sock_read_callback, MAIN_CTX);
+	if (event_add(ev_udp_read, NULL) == -1) {
+		fprintf(stderr, "%s() fail to create udp_read event\n", __func__);
+		exit(0);
+	}
+
+	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
+
+	event_base_free(MAIN_CTX->evbase_main);
+
+	return 0;
 }
