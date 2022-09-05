@@ -61,7 +61,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 {
 	/* load config */
 	config_init(&MAIN_CTX->CFG);
-	if (!config_read_file(&MAIN_CTX->CFG, "./eapp.cfg")) {
+	if (!config_read_file(&MAIN_CTX->CFG, "./eap5g.cfg")) {
         fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
             __func__,
             config_error_file(&MAIN_CTX->CFG),
@@ -72,11 +72,27 @@ int initialize(main_ctx_t *MAIN_CTX)
         fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
         config_write(&MAIN_CTX->CFG, stderr);
         fprintf(stderr, "===========================================\n");
-
-        config_set_options(&MAIN_CTX->CFG, 0);
-        config_set_tab_width(&MAIN_CTX->CFG, 4);
-        config_write_file(&MAIN_CTX->CFG, "./eapp.cfg"); // save cfg with indent
 	}
+
+    /* create queue id info */
+    int queue_key = 0;
+    config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.eap5g_nwucp_queue", &queue_key);
+    if ((MAIN_CTX->QID_INFO.eap5g_nwucp_qid = util_get_queue_info(queue_key, "eap5g_nwucp_queue")) < 0) {
+        return (-1);
+    }
+    config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_eap5g_queue", &queue_key);
+    if ((MAIN_CTX->QID_INFO.nwucp_eap5g_qid = util_get_queue_info(queue_key, "nwucp_eap5g_queue")) < 0) {
+        return (-1);
+    }
+    /* create distr info */
+    if (config_lookup_int(&MAIN_CTX->CFG, "distr_info.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 ||
+            MAIN_CTX->DISTR_INFO.worker_num > MAX_WORKER_NUM) {
+        return (-1);
+    }   
+    config_lookup_int(&MAIN_CTX->CFG, "distr_info.eap5g_nwucp_worker_queue", &queue_key);
+    if ((MAIN_CTX->DISTR_INFO.worker_distr_qid = util_get_queue_info(queue_key, "eap5g_nwucp_worker_queue")) < 0) {
+        return (-1);
+    }
 
 	/* udp listen port */
 	if (config_lookup_int(&MAIN_CTX->CFG, "process_config.udp_listen_port", &MAIN_CTX->udp_listen_port) < 0) {

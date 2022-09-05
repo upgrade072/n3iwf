@@ -69,9 +69,9 @@ typedef struct ppid_pqid_t {
 } ppid_pqid_t;
 
 typedef struct qid_info_t {
-	int send_relay;
-	int recv_relay_num;
-	ppid_pqid_t *recv_relay;
+	int sctp_send_relay;
+	int sctp_recv_relay_num;
+	ppid_pqid_t *sctp_recv_relay;
 } qid_info_t;
 
 typedef struct tailq_entry {

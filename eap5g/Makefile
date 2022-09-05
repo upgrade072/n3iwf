@@ -12,7 +12,7 @@ BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 
 SRCS			= main.c io_worker.c udp.c comm.c
 OBJS			= $(SRCS:.c=.o)
-AOUT			= eapp
+AOUT			= eap5g
 DEST			= ../BIN
 CFLAG			= $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function
 

@@ -35,7 +35,7 @@ int util_get_queue_info(int key, const char *prefix)
 		return -1;
 	}
 
-	fprintf(stderr, "msgq_id=(%d)\n", msgq_id);
+	fprintf(stderr, "[%s] msgq_id=(%d)\n", prefix, msgq_id);
 	util_print_msgq_info(key, msgq_id);
 	return msgq_id;
 }

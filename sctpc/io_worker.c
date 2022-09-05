@@ -95,8 +95,8 @@ HSS_FAIL:
 
 void relay_msg_to_ppid(sctp_msg_t *send_msg)
 {
-	for (int i = 0; i < MAIN_CTX->QID_INFO.recv_relay_num; i++) {
-		ppid_pqid_t *pqid = MAIN_CTX->QID_INFO.recv_relay;
+	for (int i = 0; i < MAIN_CTX->QID_INFO.sctp_recv_relay_num; i++) {
+		ppid_pqid_t *pqid = MAIN_CTX->QID_INFO.sctp_recv_relay;
 		if (pqid->sctp_ppid == send_msg->tag.ppid) {
 			msgsnd(pqid->proc_pqid, send_msg, SCTP_MSG_SIZE(send_msg), IPC_NOWAIT);
 			fprintf(stderr, "{dbg} %s send to msg to proc\n", __func__);

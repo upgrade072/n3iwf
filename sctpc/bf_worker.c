@@ -38,7 +38,7 @@ void bf_msgq_read(int fd, short events, void *data)
 
 	/* check if there exist something to send */
 	struct msqid_ds msgq_stat = {{0,}};
-	while ((msgctl(MAIN_CTX->QID_INFO.send_relay, IPC_STAT, &msgq_stat) >= 0) 
+	while ((msgctl(MAIN_CTX->QID_INFO.sctp_send_relay, IPC_STAT, &msgq_stat) >= 0) 
 			&& (msgq_stat.msg_qnum > 0)) {
 
 		/* find empty slot */
@@ -46,7 +46,7 @@ void bf_msgq_read(int fd, short events, void *data)
 		if (buffer == NULL) return;
 
 		/* receive race */
-		buffer->size = msgrcv(MAIN_CTX->QID_INFO.send_relay, buffer->buffer, worker_ctx->recv_buff.each_size, 0, IPC_NOWAIT);
+		buffer->size = msgrcv(MAIN_CTX->QID_INFO.sctp_send_relay, buffer->buffer, worker_ctx->recv_buff.each_size, 0, IPC_NOWAIT);
 
 		/* find dest-conn status */
 			/* if unabe reply to sender or discard */

@@ -84,10 +84,11 @@ int initialize(main_ctx_t *MAIN_CTX)
         fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
         config_write(&MAIN_CTX->CFG, stderr);
         fprintf(stderr, "===========================================\n");
-
+#if 0
         config_set_options(&MAIN_CTX->CFG, 0);
         config_set_tab_width(&MAIN_CTX->CFG, 4);
         config_write_file(&MAIN_CTX->CFG, "./ngapp.cfg"); // save cfg with indent
+#endif
     }
 
 	/* create asn1 context */
@@ -120,21 +121,16 @@ int initialize(main_ctx_t *MAIN_CTX)
 	}
 
 	/* create distr info */
-	if (config_lookup_string(&MAIN_CTX->CFG, "ngap_distr.worker_rule", &MAIN_CTX->DISTR_INFO.worker_rule) < 0) {
+	if (config_lookup_string(&MAIN_CTX->CFG, "distr_info.ngap_distr_rule", &MAIN_CTX->DISTR_INFO.ngap_distr_rule) < 0) {
 		return (-1);
 	}
-	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 || 
+	if (config_lookup_int(&MAIN_CTX->CFG, "distr_info.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 || 
 			MAIN_CTX->DISTR_INFO.worker_num > MAX_WORKER_NUM) {
 		return (-1);
 	}
-	int worker_base_qid = 0;
-	if (config_lookup_int(&MAIN_CTX->CFG, "ngap_distr.worker_base_qid", &worker_base_qid) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "distr_info.ngapp_nwucp_worker_queue", &queue_key);
+	if ((MAIN_CTX->DISTR_INFO.worker_distr_qid = util_get_queue_info(queue_key, "ngapp_nwucp_worker_queue")) < 0) {
 		return (-1);
-	}
-	for (int i = 0; i < MAIN_CTX->DISTR_INFO.worker_num || i < MAX_WORKER_NUM; i++) {
-		if ((MAIN_CTX->DISTR_INFO.worker_distr_qid[i] = util_get_queue_info(worker_base_qid + i, "worker_distr_qid")) < 0) {
-			return (-1);
-		}
 	}
 
 	/* create io workers */

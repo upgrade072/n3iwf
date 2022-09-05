@@ -24,6 +24,8 @@
 
 #include <eap5g.h>
 
+#include <n3iwf_comm.h>
+
 #define MAX_WORKER_NUM      12
 
 #define MAX_DISTR_BUFF_SIZE 65536
@@ -45,6 +47,16 @@ typedef struct recv_buff_t {
     recv_buf_t *buffers;
 } recv_buff_t;
 
+typedef struct qid_info_t {
+    int eap5g_nwucp_qid;
+    int nwucp_eap5g_qid;
+} qid_info_t;
+
+typedef struct nwucp_distr_t {
+    int worker_num;
+    int worker_distr_qid;
+} nwucp_distr_t;
+
 typedef struct worker_ctx_t {
     pthread_t pthread_id;
     int thread_index;
@@ -61,13 +73,13 @@ typedef struct worker_thread_t {
 
 typedef struct main_ctx_t {
 	config_t CFG;
-	struct event_base *evbase_main;
-
-	int udp_listen_port;
-	int udp_sock;
-
+    qid_info_t QID_INFO;
+    nwucp_distr_t DISTR_INFO;
 	worker_thread_t IO_WORKERS;
 
+	struct event_base *evbase_main;
+	int udp_listen_port;
+	int udp_sock;
 	recv_buff_t udp_buff;
 } main_ctx_t;
 

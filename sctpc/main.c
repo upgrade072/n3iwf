@@ -94,31 +94,32 @@ int initialize(main_ctx_t *MAIN_CTX)
 		fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
 		config_write(&MAIN_CTX->CFG, stderr);
 		fprintf(stderr, "===========================================\n");
-
+#if 0
 		config_set_options(&MAIN_CTX->CFG, 0);
 		config_set_tab_width(&MAIN_CTX->CFG, 4);
 		config_write_file(&MAIN_CTX->CFG, "./sctpc.cfg"); // save cfg with indent
+#endif
 	}
 
 	/* create queue_id_info */
 	int queue_key = 0;
-	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.send_relay", &queue_key);
-	if ((MAIN_CTX->QID_INFO.send_relay = util_get_queue_info(queue_key, "send_relay")) < 0) {
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.sctp_send_relay", &queue_key);
+	if ((MAIN_CTX->QID_INFO.sctp_send_relay = util_get_queue_info(queue_key, "sctp_send_relay")) < 0) {
 		return (-1);
 	}
-	config_setting_t *conf_recv_relay = config_lookup(&MAIN_CTX->CFG, "queue_id_info.recv_relay");
-	MAIN_CTX->QID_INFO.recv_relay_num = conf_recv_relay == NULL ? 0 : config_setting_length(conf_recv_relay);
-	if (MAIN_CTX->QID_INFO.recv_relay_num <= 0) {
-		fprintf(stderr, "%s() fatal! queue_id_info.recv_relay not exist!\n", __func__);
+	config_setting_t *conf_sctp_recv_relay = config_lookup(&MAIN_CTX->CFG, "queue_id_info.sctp_recv_relay");
+	MAIN_CTX->QID_INFO.sctp_recv_relay_num = conf_sctp_recv_relay == NULL ? 0 : config_setting_length(conf_sctp_recv_relay);
+	if (MAIN_CTX->QID_INFO.sctp_recv_relay_num <= 0) {
+		fprintf(stderr, "%s() fatal! queue_id_info.sctp_recv_relay not exist!\n", __func__);
 		return (-1);
 	} else {
-		MAIN_CTX->QID_INFO.recv_relay = malloc(sizeof(ppid_pqid_t) * MAIN_CTX->QID_INFO.recv_relay_num);
-		for (int i = 0; i < MAIN_CTX->QID_INFO.recv_relay_num; i++) {
-			config_setting_t *elem = config_setting_get_elem(conf_recv_relay, i);
-			ppid_pqid_t *pqid = &MAIN_CTX->QID_INFO.recv_relay[i];
+		MAIN_CTX->QID_INFO.sctp_recv_relay = malloc(sizeof(ppid_pqid_t) * MAIN_CTX->QID_INFO.sctp_recv_relay_num);
+		for (int i = 0; i < MAIN_CTX->QID_INFO.sctp_recv_relay_num; i++) {
+			config_setting_t *elem = config_setting_get_elem(conf_sctp_recv_relay, i);
+			ppid_pqid_t *pqid = &MAIN_CTX->QID_INFO.sctp_recv_relay[i];
 			config_setting_lookup_int(elem, "sctp_ppid", &pqid->sctp_ppid);
 			config_setting_lookup_int(elem, "proc_pqid", &queue_key);
-			if ((pqid->proc_pqid = util_get_queue_info(queue_key, "recv_relay")) < 0) {
+			if ((pqid->proc_pqid = util_get_queue_info(queue_key, "sctp_recv_relay")) < 0) {
 				return (-1);
 			}
 		}

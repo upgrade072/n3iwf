@@ -24,13 +24,6 @@ void udp_sock_read_callback(int fd, short event, void *arg)
 		fprintf(stderr, "{dbg} oops~ %s() err (%d:%s)\n", __func__, errno, strerror(errno));
 		goto USRC_ERR;
 	}
-			
-#if 0
-	char from_ip_str[128];
-	inet_ntop(AF_INET, &recv_buf->from_addr.sin_addr, from_ip_str, INET_ADDRSTRLEN);
-	int from_port = ntohs(recv_buf->from_addr.sin_port);
-	fprintf(stderr, "{dbg} recv len=(%d) from(%s:%d)\n", recv_buf->size, from_ip_str, from_port);
-#endif
 
 	/* relay to io_worker */
 	IO_WORKER_DISTR = (IO_WORKER_DISTR + 1) % MAIN_CTX->IO_WORKERS.worker_num;

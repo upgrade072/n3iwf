@@ -79,12 +79,13 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	/* distr rule */
 	key_list_t key_list = {0,};
 	json_object *js_ngap_pdu = json_tokener_parse((const char *)json_buf.value);
-	json_object *js_distr_key = search_json_object_ex(js_ngap_pdu, MAIN_CTX->DISTR_INFO.worker_rule, &key_list);
+	json_object *js_distr_key = search_json_object_ex(js_ngap_pdu, MAIN_CTX->DISTR_INFO.ngap_distr_rule, &key_list);
 	int distr_id = js_distr_key == NULL ?  -1 : json_object_get_int(js_distr_key);
-	int qid = distr_id < 0 ?  MAIN_CTX->QID_INFO.ngapp_nwucp_qid : MAIN_CTX->DISTR_INFO.worker_distr_qid[distr_id % MAIN_CTX->DISTR_INFO.worker_num];
+	int qid = distr_id < 0 ?  MAIN_CTX->QID_INFO.ngapp_nwucp_qid : MAIN_CTX->DISTR_INFO.worker_distr_qid;
 	json_object_put(js_ngap_pdu);
 
-	ngap_msg_t recv_msg = { .mtype = 1 };
+	/* MSGQID = nwucp main or nwucp worker, MSGID = if main -> 1 or if worker -> worker_index (1+worker_id) */
+	ngap_msg_t recv_msg = { .mtype = distr_id < 0 ? 1 : (MAIN_CTX->DISTR_INFO.worker_num % distr_id) + 1 };
 	memcpy(&recv_msg.sctp_tag, &sctp_msg->tag, sizeof(sctp_tag_t));
 	recv_msg.ngap_tag.id = distr_id;
 	memcpy(&recv_msg.ngap_tag.key_list, &key_list, sizeof(key_list_t));

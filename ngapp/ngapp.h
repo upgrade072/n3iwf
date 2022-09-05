@@ -58,11 +58,11 @@ typedef struct qid_info_t {
 	int nwucp_ngapp_qid;
 } qid_info_t;
 
-typedef struct ngap_distr_t {
-	const char *worker_rule;
+typedef struct nwucp_distr_t {
+	const char *ngap_distr_rule;
 	int worker_num;
-	int worker_distr_qid[MAX_WORKER_NUM];
-} ngap_distr_t;
+	int worker_distr_qid;
+} nwucp_distr_t;
 
 typedef struct worker_ctx_t {
 	pthread_t pthread_id;
@@ -81,7 +81,7 @@ typedef struct worker_thread_t {
 typedef struct main_ctx_t {
 	config_t CFG;
 	qid_info_t QID_INFO;
-	ngap_distr_t DISTR_INFO;
+	nwucp_distr_t DISTR_INFO;
 	worker_thread_t BF_WORKERS;
 	worker_thread_t IO_WORKERS;
 	struct event_base *evbase_main;
