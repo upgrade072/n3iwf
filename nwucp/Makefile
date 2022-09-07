@@ -11,7 +11,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  -lpthread -lrt -lm -ldl
 
-SRCS			= main.c amf.c ue.c ngap.c
+SRCS			= main.c amf.c ue.c ngap.c io_worker.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN

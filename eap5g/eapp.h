@@ -22,9 +22,7 @@
 #include <event2/event.h>
 #include <event2/thread.h>
 
-#include <eap5g.h>
-
-#include <n3iwf_comm.h>
+#include <eap_intf.h>
 
 #define MAX_WORKER_NUM      12
 
@@ -63,6 +61,7 @@ typedef struct worker_ctx_t {
     char thread_name[16];
     struct event_base *evbase_thrd;
 
+	int udp_sock;
     recv_buff_t recv_buff;
 } worker_ctx_t;
 
@@ -80,7 +79,10 @@ typedef struct main_ctx_t {
 	struct event_base *evbase_main;
 	int udp_listen_port;
 	int udp_sock;
+
 	recv_buff_t udp_buff;
+
+	int ike_listen_port;
 } main_ctx_t;
 
 /* ------------------------- main.c --------------------------- */

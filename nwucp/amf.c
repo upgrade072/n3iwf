@@ -22,7 +22,7 @@ int create_amf_list(main_ctx_t *MAIN_CTX)
 }
 
 
-void amf_regi(evutil_socket_t fd, short events, void *data)
+void amf_regi(int conn_fd, short events, void *data)
 {
 	amf_ctx_t *amf_ctx = (amf_ctx_t *)data;
 

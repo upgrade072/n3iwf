@@ -200,6 +200,7 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 
 void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_param)
 {
+	an_param->set = 1;
 	int remain = total_len;
 	int progress = 0;
 	while (remain >= sizeof(an_param_raw_t)) {

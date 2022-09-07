@@ -41,6 +41,7 @@ typedef struct an_cause {
 } an_cause_t;
 
 typedef struct an_param {
+	uint8_t			set;
 	an_guami_t		guami;
 	an_plmn_id_t	plmn_id;
 	an_nssai_t		nssai;

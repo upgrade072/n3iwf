@@ -3,6 +3,11 @@
 int create_udp_sock(int port)
 {
     int udp_sock = socket(PF_INET, SOCK_DGRAM, 0);
+
+	if (port == 0) {
+		return udp_sock;
+	}
+
     int sockopt_flag = 1;
     if (setsockopt(udp_sock, SOL_SOCKET, SO_REUSEADDR, &sockopt_flag, sizeof(int)) < 0) {
         fprintf(stderr, "%s() fail to setsockopt!\n", __func__);

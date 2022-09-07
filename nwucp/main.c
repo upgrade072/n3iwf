@@ -57,8 +57,50 @@ int create_qid_info(main_ctx_t *MAIN_CTX)
 	if ((MAIN_CTX->QID_INFO.nwucp_ngapp_qid = util_get_queue_info(queue_key, "nwucp_ngapp_queue")) < 0) {
 		return (-1);
 	}
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.eap5g_nwucp_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.eap5g_nwucp_qid = util_get_queue_info(queue_key, "eap5g_nwucp_queue")) < 0) {
+		return (-1);
+	}
+	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_eap5g_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.nwucp_eap5g_qid = util_get_queue_info(queue_key, "nwucp_eap5g_queue")) < 0) {
+		return (-1);
+	}
+	config_lookup_int(&MAIN_CTX->CFG, "distr_info.ngapp_nwucp_worker_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.ngapp_nwucp_worker_qid = util_get_queue_info(queue_key, "ngapp_nwucp_worker_queue")) < 0) {
+		return (-1);
+	}
+	config_lookup_int(&MAIN_CTX->CFG, "distr_info.eap5g_nwucp_worker_queue", &queue_key);
+	if ((MAIN_CTX->QID_INFO.eap5g_nwucp_worker_qid = util_get_queue_info(queue_key, "eap5g_nwucp_worker_queue")) < 0) {
+		return (-1);
+	}
 
 	return (0);
+}
+
+int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
+{
+    if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
+        fprintf(stderr, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
+        return (-1);
+    }
+
+    WORKER->workers = calloc(1, sizeof(worker_ctx_t) * WORKER->worker_num);
+
+    for (int i = 0; i < WORKER->worker_num; i++) {
+        worker_ctx_t *worker_ctx = &WORKER->workers[i];
+        worker_ctx->thread_index = i;
+        sprintf(worker_ctx->thread_name, "%s_%02d", prefix, i);
+
+        if (pthread_create(&worker_ctx->pthread_id, NULL, io_worker_thread, worker_ctx)) {
+            fprintf(stderr, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
+            return (-1);
+        }
+
+        pthread_setname_np(worker_ctx->pthread_id, worker_ctx->thread_name);
+        fprintf(stderr, "setname=[%s]\n", worker_ctx->thread_name);
+    }
+
+    return 0;
 }
 
 int initialize(main_ctx_t *MAIN_CTX)
@@ -71,49 +113,18 @@ int initialize(main_ctx_t *MAIN_CTX)
 		return (-1);
 	}
 
+    /* io worker thread create */
+    config_lookup_int(&MAIN_CTX->CFG, "process_config.io_worker_num", &MAIN_CTX->IO_WORKERS.worker_num);
+    if (create_worker_thread(&MAIN_CTX->IO_WORKERS, "io_worker", MAIN_CTX) < 0) {
+        return (-1);
+    }
+
 	return (0);
 }
 
-void main_tick(evutil_socket_t fd, short events, void *data)
+void main_tick(int conn_fd, short events, void *data)
 {
 	//fprintf(stderr, "%s called!\n", __func__);
-}
-
-void handle_ngap_msg(ngap_msg_t *ngap_msg)
-{
-	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
-	fprintf(stderr, "{dbg} from sctp [h:%s a:%d s:%d p:%d]\n", 
-			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid);
-
-	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
-
-	key_list_t *key_list = &ngap_msg->ngap_tag.key_list;
-	memset(key_list, 0x00, sizeof(key_list_t));
-
-	int proc_code = json_object_get_int(search_json_object_ex(js_ngap_pdu, "/*/procedureCode", key_list));
-	int success = !strcmp(key_list->key_val[0], "successfulOutcome") ? true : false;
-
-	switch (proc_code)  
-	{
-	/* CAUTION! release js_ngap_pdu in func() */
-		case NGSetupResponse:
-			return amf_regi_res_handle(sctp_tag, success, js_ngap_pdu);
-		default:
-			/* we can't handle, just discard */
-			if (js_ngap_pdu != NULL) {
-				json_object_put(js_ngap_pdu);
-			}
-			break;
-	}
-}
-
-void main_msg_rcv(evutil_socket_t fd, short events, void *data)
-{
-	ngap_msg_t msg = {0,}, *ngap_msg = &msg;
-
-	while (msgrcv(MAIN_CTX->QID_INFO.ngapp_nwucp_qid, ngap_msg, sizeof(ngap_msg_t), 0, IPC_NOWAIT) > 0) {
-		handle_ngap_msg(ngap_msg);
-	}
 }
 
 int main()
@@ -131,8 +142,10 @@ int main()
     event_add(ev_tick, &one_sec);
 
     struct timeval u_sec = {0, 1};
-    struct event *ev_msg_rcv = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_msg_rcv, NULL);
-    event_add(ev_msg_rcv, &u_sec);
+    struct event *ev_msg_rcv_from_ngapp = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, msg_rcv_from_ngapp, "main");
+    event_add(ev_msg_rcv_from_ngapp, &u_sec);
+    struct event *ev_msg_rcv_from_eap5g = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, msg_rcv_from_eap5g, "main");
+    event_add(ev_msg_rcv_from_eap5g, &u_sec);
 
 	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 

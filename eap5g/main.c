@@ -2,30 +2,6 @@
 
 main_ctx_t main_ctx, *MAIN_CTX = &main_ctx;
 
-int create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
-{
-    config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_size_worker", &worker_ctx->recv_buff.each_size);
-    config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_count_worker", &worker_ctx->recv_buff.total_num);
-    if ((worker_ctx->recv_buff.each_size <= 0 || worker_ctx->recv_buff.each_size > MAX_DISTR_BUFF_SIZE) ||
-        (worker_ctx->recv_buff.total_num <= 0 || worker_ctx->recv_buff.total_num > MAX_DISTR_BUFF_NUM)) {
-        fprintf(stderr, "%s() fatal! process_config.queue_size_at_bf=(%d/max=%d) process_config.queue_count_at_bf=(%d/max=%d)!\n",
-                __func__,
-                worker_ctx->recv_buff.each_size, MAX_DISTR_BUFF_SIZE,
-                worker_ctx->recv_buff.total_num, MAX_DISTR_BUFF_NUM);
-        return (-1);
-    }
-
-    worker_ctx->recv_buff.buffers = malloc(sizeof(recv_buf_t) * worker_ctx->recv_buff.total_num);
-    for (int i = 0; i < worker_ctx->recv_buff.total_num; i++) {
-        recv_buf_t *buffer = &worker_ctx->recv_buff.buffers[i];
-        buffer->occupied = 0;
-        buffer->size = 0;
-        buffer->buffer = malloc(worker_ctx->recv_buff.each_size);
-    }
-
-    return (0);
-}
-
 int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
 {
     if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
@@ -40,15 +16,12 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
         worker_ctx->thread_index = i;
         sprintf(worker_ctx->thread_name, "%s_%02d", prefix, i);
 
-        if (create_worker_recv_queue(worker_ctx, MAIN_CTX) < 0) {
-            fprintf(stderr, "%s() fatal! fail to recv queue at worker=[%s]\n", __func__, worker_ctx->thread_name);
-            return (-1);
-        }
-
         if (pthread_create(&worker_ctx->pthread_id, NULL, io_worker_thread, worker_ctx)) {
             fprintf(stderr, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
             return (-1);
         }
+
+		worker_ctx->udp_sock = create_udp_sock(0);
 
         pthread_setname_np(worker_ctx->pthread_id, worker_ctx->thread_name);
         fprintf(stderr, "setname=[%s]\n", worker_ctx->thread_name);
@@ -121,6 +94,11 @@ int initialize(main_ctx_t *MAIN_CTX)
 			buffer->size = 0;
 			buffer->buffer = malloc(MAIN_CTX->udp_buff.each_size);
 		}
+	}
+
+	/* ike listen port */
+	if (config_lookup_int(&MAIN_CTX->CFG, "process_config.ike_listen_port", &MAIN_CTX->ike_listen_port) < 0) {
+		return (-1);
 	}
 
 	/* io worker thread create */
