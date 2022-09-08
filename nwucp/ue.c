@@ -83,12 +83,17 @@ uint8_t get_eap_id()
 
 void ue_ctx_release(int conn_fd, short events, void *data)
 {
-	// TODO 
-	fprintf(stderr, "{dbg TODO} %s() called!\n", __func__);
-
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
 
-	ue_ctx->occupied = 0; // and timer null event del ...
+	/* stop timer */
+	if (ue_ctx->ev_timer != NULL) {
+		event_del(ue_ctx->ev_timer);
+		ue_ctx->ev_timer = NULL;
+	}
+
+	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
+
+	ue_ctx->occupied = 0;
 }
 
 void eap_req_5g_start(int conn_fd, short events, void *data)
@@ -128,5 +133,5 @@ void eap_req_5g_start(int conn_fd, short events, void *data)
 
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d) if err (%d:%s)\n", __func__, res, errno, strerror(errno));
+	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
 }

@@ -14,7 +14,8 @@ typedef enum n3iwf_msgcode_t {
 } n3iwf_msgcode_t;
 
 typedef enum n3iwf_rescode_t {
-	N3_EAP_REQUEST = 0,
+	N3_EAP_INIT = 0,
+	N3_EAP_REQUEST,
 	N3_EAP_SUCCESS,
 	N3_EAP_FAILURE,
 	/* .... */

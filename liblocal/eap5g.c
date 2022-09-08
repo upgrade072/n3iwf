@@ -133,7 +133,7 @@ void parse_an_guami(unsigned char *params, size_t len, an_guami_t *guami)
 	char mccmnc[7] = {0,};
 	sprintf(mccmnc, "%s%s", guami->mcc, guami->mnc);
 	print_bcd_str(mccmnc, guami->plmn_id_bcd, 7);
-	fprintf(stderr, "{DBG} 0x%s-> 0x%s\n", mccmnc, guami->plmn_id_bcd);
+	fprintf(stderr, "%s() guami plmn_id_bcd=(0x%s)\n", __func__, guami->plmn_id_bcd);
 }
 
 void parse_an_plmn_id(unsigned char *params, size_t len, an_plmn_id_t *plmn_id)
@@ -159,7 +159,7 @@ void parse_an_plmn_id(unsigned char *params, size_t len, an_plmn_id_t *plmn_id)
 	char mccmnc[7] = {0,};
 	sprintf(mccmnc, "%s%s", plmn_id->mcc, plmn_id->mnc);
 	print_bcd_str(mccmnc, plmn_id->plmn_id_bcd, 7);
-	fprintf(stderr, "{DBG} 0x%s-> 0x%s\n", mccmnc, plmn_id->plmn_id_bcd);
+	fprintf(stderr, "%s() an plmn_id_bcd=(0x%s)\n", __func__, plmn_id->plmn_id_bcd);
 }
 
 void parse_an_aec(unsigned char *params, size_t len, an_cause_t *cause)
@@ -185,12 +185,12 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 			return;
 		}
 		uint8_t sst = params[progress];
-		char ssd_str[6+1] = {0,};
-		mem_to_hex(&params[progress+1], 3, ssd_str);
+		char sd_str[6+1] = {0,};
+		mem_to_hex(&params[progress+1], 3, sd_str);
 
 		nssai->sst[nssai->set_num] = sst;
-		sprintf(nssai->ssd_str[nssai->set_num], "%s", ssd_str);
-		fprintf(stderr, "%s() sst=(%d) ssd=(%s)\n", __func__, nssai->sst[nssai->set_num], nssai->ssd_str[nssai->set_num]);
+		sprintf(nssai->sd_str[nssai->set_num], "%s", sd_str);
+		fprintf(stderr, "%s() sst=(%d) sd=(%s)\n", __func__, nssai->sst[nssai->set_num], nssai->sd_str[nssai->set_num]);
 		nssai->set_num += 1;
 
 		progress += len;
@@ -201,6 +201,7 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_param)
 {
 	an_param->set = 1;
+
 	int remain = total_len;
 	int progress = 0;
 	while (remain >= sizeof(an_param_raw_t)) {
@@ -210,7 +211,7 @@ void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_par
 		remain = remain - tlv_len;
 		progress = progress + tlv_len;
 
-		fprintf(stderr, "T:%d L:%d V:", an_param_raw->type, an_param_raw->length);
+		fprintf(stderr, "%s() T:%d L:%d V:", __func__, an_param_raw->type, an_param_raw->length);
 
 		switch (an_param_raw->type) {
 			case AN_GUAMI:
@@ -290,7 +291,6 @@ void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_
 	an_len = ntohs(an_len);
 	unsigned char *an_params = &eap->data[10 + 2];
 	uint16_t an_cut_pos = 10 + 2 + an_len;
-	fprintf(stderr, "{dbg} an_len=(%d)\n", an_len);
 
 	/* nas pdu */
 	uint16_t nas_len;
@@ -298,12 +298,12 @@ void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_
 	nas_len = ntohs(nas_len);
 	unsigned char *nas_pdu = &eap->data[an_cut_pos + 2];
 	uint16_t nas_cut_pos = an_cut_pos + 2 + nas_len;
-	fprintf(stderr, "{dbg} nas_len=(%d)\n", nas_len);
 
 	if (len != (EAP_HEADER_LEN + nas_cut_pos)) {
 		fprintf(stderr, "{dbg} %s() recv invalid an/nas len!\n", __func__);
 		return;
 	}
+	fprintf(stderr, "{dbg} %s() check len an=(%d) nas=(%d)\n", __func__, an_len, nas_len);
 
 	/* parse an_params */
 	parse_an_params(an_params, an_len, &eap_relay->an_param);

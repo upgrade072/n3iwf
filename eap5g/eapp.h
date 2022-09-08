@@ -85,20 +85,27 @@ typedef struct main_ctx_t {
 	int ike_listen_port;
 } main_ctx_t;
 
-/* ------------------------- main.c --------------------------- */
-int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
-int     main();
-
 /* ------------------------- comm.c --------------------------- */
 recv_buf_t      *get_recv_buf(recv_buff_t *recv_buff);
 void    release_recv_buf(recv_buff_t *recv_buff, recv_buf_t *recv_buf);
 
-/* ------------------------- udp.c --------------------------- */
-void    udp_sock_read_callback(int fd, short event, void *arg);
+/* ------------------------- main.c --------------------------- */
+int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+int     main();
 
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_udp_request(int fd, short event, void *arg);
+void    handle_ike_request(ike_msg_t *ike_msg);
+void    msg_rcv_from_nwucp(int fd, short event, void *arg);
 void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
 void    *io_worker_thread(void *arg);
+
+/* ------------------------- intf.c --------------------------- */
+void    udp_sock_read_callback(int fd, short event, void *arg);
+void    handle_pkt_ntohs(n3iwf_msg_t *n3iwf_msg);
+void    handle_pkg_htons(n3iwf_msg_t *n3iwf_msg);
+void    create_ike_tag(ike_tag_t *ike_tag, struct sockaddr_in *from_addr);
+const   char *n3_msg_code_str(int msg_code);
+const   char *n3_res_code_str(int res_code);
+const   char *eap5g_msg_id_str(int msg_id);

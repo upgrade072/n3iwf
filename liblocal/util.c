@@ -234,7 +234,11 @@ void mem_to_hex(unsigned char *input, size_t input_size, char *output)
 	for (int i = 0; i < input_size; i++) {
 		sprintf(output + strlen(output), "%02X", ((unsigned char *)input)[i]);
 	}
-	output[input_size * 2 + 1] = '\0';
+	if (input_size == 0)  {
+		output[0] = '\0';
+	} else {
+		output[input_size * 2 + 1] = '\0';
+	}
 }
 
 void hex_to_mem(char *input, char *output, size_t *output_size)

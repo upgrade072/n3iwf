@@ -31,7 +31,7 @@ typedef struct an_nssai {
 	uint8_t set_num;
 #define MAX_AN_NSSAI_NUM	8
 	uint8_t sst[MAX_AN_NSSAI_NUM];
-	char	ssd_str[MAX_AN_NSSAI_NUM][6+1];
+	char	sd_str[MAX_AN_NSSAI_NUM][6+1];
 } an_nssai_t;
 
 typedef struct an_cause {

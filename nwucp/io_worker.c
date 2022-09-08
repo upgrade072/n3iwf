@@ -57,7 +57,9 @@ void msg_rcv_from_ngapp(int conn_fd, short events, void *data)
 			ev_caller == EC_MAIN ? 0 : WORKER_CTX->thread_index + 1,
 			IPC_NOWAIT) > 0) {
 
-			handle_ngap_msg(ngap_msg, ev_caller);
+		fprintf(stderr, "{dbg} %s() [%s%s] recv msg!\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
+
+		handle_ngap_msg(ngap_msg, ev_caller);
 	}
 }
 
@@ -74,7 +76,9 @@ void msg_rcv_from_eap5g(int conn_fd, short events, void *data)
 			ev_caller == EC_MAIN ? 0 : WORKER_CTX->thread_index + 1,
 			IPC_NOWAIT) > 0) {
 
-			handle_ike_msg(ike_msg, ev_caller);
+		fprintf(stderr, "{dbg} %s() [%s%s] recv msg!\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
+
+		handle_ike_msg(ike_msg, ev_caller);
 	}
 }
 
