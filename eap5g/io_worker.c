@@ -7,13 +7,14 @@ void handle_udp_request(int fd, short event, void *arg)
 {   
 	recv_buf_t *recv_buf = (recv_buf_t *)arg;
 	if (recv_buf->size < sizeof(n3iwf_msg_t)) {
-		fprintf(stderr, "%s() recv invalid packet len!\n", __func__);
+		fprintf(stderr, "%s() recv insufficient packet len!\n", __func__);
 		goto HUR_END;
 	}
 
 	n3iwf_msg_t *n3iwf_msg = (n3iwf_msg_t *)recv_buf->buffer;
 	if (N3IWF_MSG_SIZE(n3iwf_msg) != recv_buf->size) {
-		fprintf(stderr, "%s() recv invalid payload len!\n", __func__);
+		fprintf(stderr, "%s() recv invalid size!=(%ld) payload_len=(%d)\n", 
+				__func__, N3IWF_MSG_SIZE(n3iwf_msg), htons(n3iwf_msg->payload_len));
 		goto HUR_END;
 	}
 

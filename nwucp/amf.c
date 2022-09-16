@@ -21,7 +21,6 @@ int create_amf_list(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
-
 void amf_regi(int conn_fd, short events, void *data)
 {
 	amf_ctx_t *amf_ctx = (amf_ctx_t *)data;
@@ -32,19 +31,7 @@ void amf_regi(int conn_fd, short events, void *data)
 		return;
 	}
 
-	ngap_msg_t msg = { .mtype = 1, }, *ngap_msg = &msg;
-	sprintf(ngap_msg->sctp_tag.hostname, "%s", amf_ctx->hostname);
-	ngap_msg->sctp_tag.stream_id = 0;
-	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
-	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(MAIN_CTX->js_ng_setup_request));
-
-	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s msgsnd res=(%d) size=(%ld) ",  __func__, res, ngap_msg->msg_size);
-	if (res < 0) {
-		fprintf(stderr, "(%d:%s)\n", errno, strerror(errno));
-	} else {
-		fprintf(stderr, "ngap_size=(%ld)\n", NGAP_MSG_SIZE(ngap_msg));
-	}
+	ngap_send_json(amf_ctx->hostname, JS_PRINT_COMPACT(MAIN_CTX->js_ng_setup_request));
 }
 
 void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
@@ -89,6 +76,8 @@ void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_nga
 	fprintf(stderr, "%s amf_ctx=[hostname:%s] recv OK response\n", __func__, sctp_tag->hostname);
 
 	amf_ctx_unset(amf_ctx);
-	amf_ctx->js_amf_data = js_ngap_pdu;
+
+	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
+
 	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(amf_ctx->js_amf_data));
 }

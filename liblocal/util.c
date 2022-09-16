@@ -291,7 +291,7 @@ int ipaddr_range_calc(char *start, char *end)
 	int ip_addr_end = htonl(ip_b.s_addr);
 
 	int ip_count = ip_addr_end - ip_addr_start;
-	fprintf(stderr, "%s(%d) - %s(%d) = range count(%d)\n", end, ip_addr_end, start, ip_addr_start, ip_count);
+	//fprintf(stderr, "%s(%d) - %s(%d) = range count(%d)\n", end, ip_addr_end, start, ip_addr_start, ip_count);
 
 	return ip_count;
 }

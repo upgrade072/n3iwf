@@ -3,6 +3,8 @@
 
 #define N3_EXPIRE_TM_SEC		3
 
+#pragma pack(1)
+
 typedef enum n3iwf_msgcode_t {
 	N3_IKE_AUTH_INIT = 0,
 	N3_IKE_AUTH_REQ,

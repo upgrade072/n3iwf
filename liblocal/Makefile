@@ -25,7 +25,7 @@ OBJS5			= $(SRCS5:.c=.o)
 AOUT5			= libudp.a
 
 DEST			= ../build
-CFLAG			= $(CFLAGS) -std=gnu99 -D_GNU_SOURCE -Wall -Wno-unused-function
+CFLAG			= $(CFLAGS) -std=gnu99 -D_GNU_SOURCE -Wall -Wno-unused-function -g
 
 #---------------------------------------------------------------------
 all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) $(AOUT5) install

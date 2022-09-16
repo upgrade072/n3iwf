@@ -8,6 +8,7 @@ typedef struct ike_tag_t {
 	char		ue_id[128];
 	char		from_addr[INET_ADDRSTRLEN];
 	int			from_port;
+	char		amf_host[128];
 } ike_tag_t;
 
 typedef struct ike_msg_t {

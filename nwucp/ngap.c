@@ -1,4 +1,22 @@
 #include <nwucp.h>
+extern main_ctx_t *MAIN_CTX;
+
+void ngap_send_json(char *hostname, const char *body)
+{
+	ngap_msg_t msg = { .mtype = 1, }, *ngap_msg = &msg;
+	sprintf(ngap_msg->sctp_tag.hostname, "%s", hostname);
+	ngap_msg->sctp_tag.stream_id = 0;
+	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
+	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", body);
+
+	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
+	fprintf(stderr, "{dbg} %s msgsnd res=(%d) size=(%ld) ",  __func__, res, ngap_msg->msg_size);
+	if (res < 0) {
+		fprintf(stderr, "(%d:%s)\n", errno, strerror(errno));
+	} else {
+		fprintf(stderr, "ngap_size=(%ld)\n", NGAP_MSG_SIZE(ngap_msg));
+	}
+}
 
 #define NGSetupRequest_JSON "{\"initiatingMessage\":{\"procedureCode\":21,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":27,\"criticality\":\"reject\",\"value\":{\"globalN3IWF-ID\":{\"pLMNIdentity\":\"%s\",\"n3IWF-ID\":{\"n3IWF-ID\":\"%s\"}}}},{\"id\":82,\"criticality\":\"ignore\",\"value\":\"%s\"},{\"id\":102,\"criticality\":\"reject\"}]}}}"
 json_object *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item)
@@ -24,4 +42,28 @@ json_object *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, con
     json_object_object_add(js_supported_ta_list, "value", js_deep_supported_ta_list);
 
 	return js_ng_setup_request;
+}
+
+#define InitialUEMessage_JSON "{\"initiatingMessage\":{\"procedureCode\":15,\"criticality\":\"ignore\",\"value\":{\"protocolIEs\":[{\"id\":85,\"criticality\":\"reject\",\"value\":%d},{\"id\":38,\"criticality\":\"reject\",\"value\":\"%s\"},{\"id\":121,\"criticality\":\"reject\",\"value\":{\"userLocationInformationN3IWF\":{\"iPAddress\":{\"value\":\"C0A87F02\",\"length\":32},\"portNumber\":\"01F4\"}}},{\"id\":90,\"criticality\":\"ignore\",\"value\":\"%s\"},{\"id\":112,\"criticality\":\"ignore\",\"value\":\"requested\"}]}}}"
+json_object *create_initial_ue_message_json(int ue_id, char *nas_pdu, char *cause)
+{
+	/* make InitialUEMessage */
+	char *ptr = NULL;
+	asprintf(&ptr, InitialUEMessage_JSON, ue_id, nas_pdu, cause);
+    json_object *js_initial_ue_message = json_tokener_parse(ptr);
+    free(ptr);
+
+	return js_initial_ue_message;
+}
+
+#define UplinkNASTransport_JSON "{\"initiatingMessage\":{\"procedureCode\":46,\"criticality\":\"ignore\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"reject\",\"value\":%d},{\"id\":85,\"criticality\":\"reject\",\"value\":%d},{\"id\":38,\"criticality\":\"reject\",\"value\":\"%s\"},{\"id\":121,\"criticality\":\"ignore\",\"value\":{\"userLocationInformationN3IWF\":{\"iPAddress\":{\"value\":\"C0A87F02\",\"length\":32},\"portNumber\":\"01F4\"}}}]}}}"
+json_object *create_uplink_nas_transport_json(int amf_ue_id, int ran_ue_id, const char *nas_pdu)
+{
+	/* make UplinkNASTransport */
+	char *ptr = NULL;
+	asprintf(&ptr, UplinkNASTransport_JSON, amf_ue_id, ran_ue_id, nas_pdu);
+    json_object *js_uplink_nas_transport_message = json_tokener_parse(ptr);
+    free(ptr);
+
+	return js_uplink_nas_transport_message;
 }

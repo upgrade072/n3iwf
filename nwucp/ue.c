@@ -12,6 +12,8 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 	if (ret <= 0) {
 		fprintf(stderr, "%s fail to get ip range from=[%s]\n", __func__, ip_range);
 		return (-1);
+	} else {
+		sprintf(MAIN_CTX->ue_info.ue_start_ip, "%s", ip_start);
 	}
 
 	int num_of_addr = ipaddr_range_calc(ip_start, ip_end);
@@ -35,10 +37,10 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
-ue_ctx_t *get_ue_ctx(main_ctx_t *MAIN_CTX)
+ue_ctx_t *ue_ctx_assign(main_ctx_t *MAIN_CTX)
 {
 	for (int i = 0; i < MAIN_CTX->ue_info.ue_num; i++) {
-		int index = (MAIN_CTX->ue_info.cur_index + i) % MAIN_CTX->ue_info.ue_num;
+		int index = (MAIN_CTX->ue_info.cur_index + 1 + i) % MAIN_CTX->ue_info.ue_num;
 		ue_ctx_t *ue_ctx = &MAIN_CTX->ue_info.ue_ctx[index];
 		if (ue_ctx->occupied == 0) {
 			ue_ctx->occupied = 1;
@@ -51,87 +53,206 @@ ue_ctx_t *get_ue_ctx(main_ctx_t *MAIN_CTX)
 	return NULL;
 }
 
-worker_ctx_t *get_worker_ctx_by_ue(ue_ctx_t *ue_ctx)
+void ue_ctx_unset(ue_ctx_t *ue_ctx)
 {
-	return &MAIN_CTX->IO_WORKERS.workers[ue_ctx->index % MAIN_CTX->IO_WORKERS.worker_num];
+	ue_ctx_stop_timer(ue_ctx);
+
+	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
+
+	ue_ctx->state = NULL;
+	ue_ctx->occupied = 0;
 }
 
-void ike_auth_assign_ue(ike_msg_t *ike_msg)
+ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 {
-	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
-	ue_ctx_t *ue_ctx = get_ue_ctx(MAIN_CTX);
-
-	/* TODO IKE INFORM BACKOFF */
-	if (ue_ctx == NULL) {
-		return;
+	if (index >= MAIN_CTX->ue_info.ue_num) {
+		fprintf(stderr, "{dbg} %s() called with invalid ue_index (%d), ue_num=(%d)!\n", 
+				__func__, index, MAIN_CTX->ue_info.ue_num);
+		return NULL;
 	}
-	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
-	memcpy(&ue_ctx->ctx_info, &n3iwf_msg->ctx_info, sizeof(ctx_info_t));
-	ue_ctx->ctx_info.cp_id = ue_ctx->index;
+	if ((index % MAIN_CTX->IO_WORKERS.worker_num) != worker_ctx->thread_index) {
+		fprintf(stderr, "{dbg} %s() called with invalid worker (%d), ue_index (%d) valid worker=(%d)!\n", 
+				__func__, worker_ctx->thread_index, index, index % MAIN_CTX->IO_WORKERS.worker_num);
+		return NULL;
+	}
 
-	worker_ctx_t *worker_ctx = get_worker_ctx_by_ue(ue_ctx);
+	ue_ctx_t *ue_ctx = &MAIN_CTX->ue_info.ue_ctx[index];
+	if (ue_ctx->occupied == 0) {
+		fprintf(stderr, "{dbg} %s() called with invalid ue_index (%d), it's unoccupied!\n", __func__, index);
+		return NULL;
+	}
 
-	event_base_once(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, eap_req_5g_start, ue_ctx, NULL);
+	return ue_ctx;
 }
 
-uint8_t get_eap_id()
+void ue_ctx_stop_timer(ue_ctx_t *ue_ctx)
 {
-	srand((unsigned int)time(NULL));
-	uint8_t id = rand();
-	return id;
+	if (ue_ctx->ev_timer != NULL) {
+		event_del(ue_ctx->ev_timer);
+		ue_ctx->ev_timer = NULL;
+	}
 }
 
 void ue_ctx_release(int conn_fd, short events, void *data)
 {
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
 
-	/* stop timer */
-	if (ue_ctx->ev_timer != NULL) {
-		event_del(ue_ctx->ev_timer);
-		ue_ctx->ev_timer = NULL;
-	}
-
-	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
-
-	ue_ctx->occupied = 0;
+	ue_ctx_unset(ue_ctx);
 }
 
-void eap_req_5g_start(int conn_fd, short events, void *data)
+void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 {
-	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
-	worker_ctx_t *worker_ctx = get_worker_ctx_by_ue(ue_ctx);
-
-	eap_relay_t *eap_5g = &ue_ctx->eap_5g;
-	memset(eap_5g, 0x00, sizeof(eap_relay_t));
-
-	/* make eap start message at ue_ctx */
-	eap_5g->eap_code = EAP_REQUEST;
-	eap_5g->eap_id = get_eap_id();
-	eap_5g->msg_id = NAS_5GS_START;
-
-	/* make IKE_AUTH_RES */
-	ike_msg_t msg = { .mtype = 1 }, *ike_msg = &msg;
-	// ue_id part
-	memcpy(&ike_msg->ike_tag, &ue_ctx->ike_tag, sizeof(ike_tag_t));
-	// n3iwf_msg part
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
-	n3iwf_msg->msg_code = N3_IKE_AUTH_RES;
-	n3iwf_msg->res_code = N3_EAP_REQUEST;
-	memcpy(&n3iwf_msg->ctx_info, &ue_ctx->ctx_info, sizeof(ctx_info_t));
-	// eap_5g_part
-	memcpy(&ike_msg->eap_5g, eap_5g, sizeof(eap_relay_t));
+	ue_ctx_t *ue_ctx = ue_ctx_assign(MAIN_CTX);
 
-	/* start timer */
-	if (ue_ctx->ev_timer != NULL) {
-		event_del(ue_ctx->ev_timer);
-		ue_ctx->ev_timer = NULL;
+	if (ue_ctx == NULL) {
+		fprintf(stderr, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
+		return;
 	}
-	struct timeval tmout_sec = { N3_EXPIRE_TM_SEC, 0 };
-	ue_ctx->state = "eap_request";
-	ue_ctx->ev_timer = event_new(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx);
-	event_add(ue_ctx->ev_timer, &tmout_sec);
+	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
+	memcpy(&ue_ctx->ctx_info, &n3iwf_msg->ctx_info, sizeof(ctx_info_t));
+	ue_ctx->ctx_info.cp_id = ue_ctx->index;
 
-	/* send message to EAP5G */
-	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+	worker_ctx_t *worker_ctx = worker_ctx_get_by_index(ue_ctx->index);
+
+	event_base_once(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, eap_req_5g_start, ue_ctx, NULL);
 }
+
+int ue_compare_guami(an_param_t *an_param, json_object *js_guami)
+{
+	if (js_guami == NULL) {
+		return -1;
+	}
+
+	an_guami_t *guami = &an_param->guami;
+
+	char guami_str[128] = {0,};
+	sprintf(guami_str, "%s%s%02X", guami->plmn_id_bcd, guami->amf_id_str, guami->amf_pointer);
+
+	for (int i = 0; i < json_object_array_length(js_guami); i++) {
+		json_object *js_elem = json_object_array_get_idx(js_guami, i);
+
+		char compare_str[128] = {0,};
+		sprintf(compare_str, "%s%s%s%s", 
+				json_object_get_string(search_json_object(js_elem, "/gUAMI/pLMNIdentity")),
+				json_object_get_string(search_json_object(js_elem, "/gUAMI/aMFRegionID")),
+				json_object_get_string(search_json_object(js_elem, "/gUAMI/aMFSetID")),
+				json_object_get_string(search_json_object(js_elem, "/gUAMI/aMFPointer")));
+
+		if (!strcmp(guami_str, compare_str)) {
+			fprintf(stderr, "{dbg} %s() find guami=[%s] in (%d)th elem of amf profile!\n", __func__, guami_str, i);
+			return 1;
+		}
+	}
+
+	return -1;
+}
+
+int ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list)
+{
+	if (js_slice_list == NULL) {
+		return -1;
+	}
+
+	for (int i = 0; i < json_object_array_length(js_slice_list); i++) {
+		json_object *js_elem = json_object_array_get_idx(js_slice_list, i);
+
+		char compare_str[128] = {0,};
+		sprintf(compare_str, "%s%s",
+				json_object_get_string(search_json_object(js_elem, "/s-NSSAI/sST")),
+				json_object_get_string(search_json_object(js_elem, "/s-NSSAI/sD")));
+
+		if (!strcmp(sstsd_str, compare_str)) {
+			fprintf(stderr, "{dbg} %s() find sstsd=[%s] in (%d)th elem of amf profile (sliceSupportList)!\n", __func__, sstsd_str, i);
+			return 1;
+		}
+	}
+
+	return -1;
+}
+
+int ue_compare_plmn_nssai(an_param_t *an_param, json_object *js_plmn_id)
+{
+	if (js_plmn_id == NULL) {
+		return -1;
+	}
+
+	an_plmn_id_t *plmn_id = &an_param->plmn_id;
+	an_nssai_t   *nssai   = &an_param->nssai;
+
+	for (int i = 0; i < json_object_array_length(js_plmn_id); i++) {
+		json_object *js_elem = json_object_array_get_idx(js_plmn_id, i);
+
+		const char *compare_plmn_id = json_object_get_string(search_json_object(js_elem, "/pLMNIdentity"));
+		if (strcmp(plmn_id->plmn_id_bcd, compare_plmn_id)) {
+			continue;
+		}
+
+		json_object *js_slice_list = search_json_object(js_elem, "/sliceSupportList");
+
+		int find_num = 0;
+		for (int k = 0; k < nssai->set_num; k++) {
+			char sstsd_str[128] = {0,};
+			sprintf(sstsd_str, "%02X%s", nssai->sst[k], nssai->sd_str[k]);
+			if (ue_compare_nssai(sstsd_str, js_slice_list) > 0) {
+				find_num ++;
+			}
+		}
+		if (find_num != nssai->set_num) {
+			continue;
+		}
+
+		return 1;
+	}
+
+	return -1;
+}
+
+int ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, json_object *js_plmn_id)
+{
+	an_param_t *an_param = &eap_5g->an_param;
+
+	if ((an_param->guami.set && 
+			ue_compare_guami(an_param, js_guami) < 0) ||
+		(an_param->plmn_id.set && an_param->nssai.set_num && 
+			ue_compare_plmn_nssai(an_param, js_plmn_id) < 0)) {
+		return -1; /* not match */
+	} else {
+		return 1;  /* ok match */
+	}
+}
+
+void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
+{
+	eap_relay_t *eap_5g = &ike_msg->eap_5g;
+
+	int find_amf = 0;
+	for (int i = 0; i < link_node_length(&MAIN_CTX->amf_list); i++) {
+		amf_ctx_t *amf_ctx = link_node_get_nth_data(&MAIN_CTX->amf_list, i);
+		key_list_t key_list_guami = {0,};
+		json_object *js_guami = search_json_object_ex(amf_ctx->js_amf_data,
+				"/successfulOutcome/value/protocolIEs/{id:96, value}", &key_list_guami);
+		key_list_t key_list_plmn_id = {0,};
+		json_object *js_plmn_id = search_json_object_ex(amf_ctx->js_amf_data,
+				"/successfulOutcome/value/protocolIEs/{id:80, value}", &key_list_plmn_id);
+
+		if (ue_check_an_param_with_amf(eap_5g, js_guami, js_plmn_id) > 0) {
+			find_amf = 1;
+			sprintf(ike_msg->ike_tag.amf_host, "%s", amf_ctx->hostname);
+			fprintf(stderr, "{dbg} %s() find an_param match at amf=[%s] cp_id=(%d)\n", __func__, amf_ctx->hostname, ike_msg->n3iwf_msg.ctx_info.cp_id);
+			break;
+		}
+	}
+	if (!find_amf) {
+		ike_msg->ike_tag.amf_host[0] = '\0';
+	}
+
+	/* unset amf selection tag, adjust mtype by cp_id, relay to io_worker */
+	eap_5g->an_param.set = 0;
+
+	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->IO_WORKERS.worker_num + 1;
+
+	msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_worker_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
+}
+

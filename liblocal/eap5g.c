@@ -200,11 +200,10 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 
 void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_param)
 {
-	an_param->set = 1;
-
 	int remain = total_len;
 	int progress = 0;
 	while (remain >= sizeof(an_param_raw_t)) {
+		an_param->set = 1;
 		an_param_raw_t *an_param_raw = (an_param_raw_t *)&params[progress];
 
 		int tlv_len = 1 + 1 + an_param_raw->length;
@@ -245,9 +244,8 @@ void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_par
 
 void parse_nas_pdu(unsigned char *params, size_t total_len, char *nas_str)
 {
-	char nas_pdu[10240] = {0,};
-	mem_to_hex(params, total_len, nas_pdu);
-	fprintf(stderr, "%s() nas_pdu (len:%ld) [%s]\n", __func__, total_len, nas_pdu);
+	mem_to_hex(params, total_len, nas_str);
+	fprintf(stderr, "%s() nas_pdu (len:%ld) [%s]\n", __func__, total_len, nas_str);
 }
 
 void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_size)

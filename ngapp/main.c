@@ -124,7 +124,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 	if (config_lookup_string(&MAIN_CTX->CFG, "distr_info.ngap_distr_rule", &MAIN_CTX->DISTR_INFO.ngap_distr_rule) < 0) {
 		return (-1);
 	}
-	if (config_lookup_int(&MAIN_CTX->CFG, "distr_info.worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 || 
+	if (config_lookup_int(&MAIN_CTX->CFG, "distr_info.nwucp_worker_num", &MAIN_CTX->DISTR_INFO.worker_num) < 0 || 
 			MAIN_CTX->DISTR_INFO.worker_num > MAX_WORKER_NUM) {
 		return (-1);
 	}

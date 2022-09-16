@@ -85,7 +85,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	json_object_put(js_ngap_pdu);
 
 	/* MSGQID = nwucp main or nwucp worker, MSGID = if main -> 1 or if worker -> worker_index (1+worker_id) */
-	ngap_msg_t recv_msg = { .mtype = distr_id < 0 ? 1 : (MAIN_CTX->DISTR_INFO.worker_num % distr_id) + 1 };
+	ngap_msg_t recv_msg = { .mtype = distr_id < 0 ? 1 : (distr_id % MAIN_CTX->DISTR_INFO.worker_num) + 1 };
 	memcpy(&recv_msg.sctp_tag, &sctp_msg->tag, sizeof(sctp_tag_t));
 	recv_msg.ngap_tag.id = distr_id;
 	memcpy(&recv_msg.ngap_tag.key_list, &key_list, sizeof(key_list_t));

@@ -9,6 +9,8 @@
 
 /* ----------- EAP5G <--> NWUCP ------------------------------------------ */
 
+#pragma pack(1)
+
 typedef struct an_guami {
 	uint8_t set;
 	char mcc[4];

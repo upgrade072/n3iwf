@@ -77,6 +77,25 @@ int create_qid_info(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
+int create_tcp_server(main_ctx_t *MAIN_CTX)
+{
+	tcp_ctx_t *tcp_server = &MAIN_CTX->tcp_server;
+
+	if (!config_lookup_int(&MAIN_CTX->CFG, "process_config.listen_port", &tcp_server->listen_port)) {
+		return (-1);
+	}
+	tcp_server->listen_addr.sin_family = AF_INET;
+	tcp_server->listen_addr.sin_port = htons(tcp_server->listen_port);
+	tcp_server->listener = evconnlistener_new_bind(MAIN_CTX->evbase_main, listener_cb, NULL,
+			LEV_OPT_REUSEABLE|LEV_OPT_CLOSE_ON_FREE|LEV_OPT_THREADSAFE,
+			16, (struct sockaddr*)&tcp_server->listen_addr, sizeof(tcp_server->listen_addr));
+	if (tcp_server->listener == NULL) {
+		fprintf(stderr, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->listen_port);
+	}
+
+	return (0);
+}
+
 int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
 {
     if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
@@ -105,11 +124,12 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
 
 int initialize(main_ctx_t *MAIN_CTX)
 {
-	if ((load_config(&MAIN_CTX->CFG) < 0) || 
+	if ((load_config(&MAIN_CTX->CFG)	< 0) || 
 		(create_n3iwf_profile(MAIN_CTX) < 0) ||
-		(create_amf_list(MAIN_CTX) < 0) ||
-		(create_ue_list(MAIN_CTX) < 0) || 
-		(create_qid_info(MAIN_CTX) < 0)) {
+		(create_amf_list(MAIN_CTX)		< 0) ||
+		(create_ue_list(MAIN_CTX)		< 0) || 
+		(create_qid_info(MAIN_CTX)		< 0) ||
+		(create_tcp_server(MAIN_CTX)	< 0)) {
 		return (-1);
 	}
 

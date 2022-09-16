@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I./ -I../build/include -I../../../include
+BUILD_INC_PATH	= -I./ -I../build/include -I../build/include/glib-2.0
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libnode.a \
@@ -9,9 +9,10 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/json_macro.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
-				  -lpthread -lrt -lm -ldl
+				  $(BUILD_LIBS_PATH)/libglib-1.3.a \
+				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c amf.c ue.c ngap.c io_worker.c
+SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN
