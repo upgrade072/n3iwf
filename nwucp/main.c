@@ -81,16 +81,21 @@ int create_tcp_server(main_ctx_t *MAIN_CTX)
 {
 	tcp_ctx_t *tcp_server = &MAIN_CTX->tcp_server;
 
-	if (!config_lookup_int(&MAIN_CTX->CFG, "process_config.listen_port", &tcp_server->listen_port)) {
+	if (!config_lookup_string(&MAIN_CTX->CFG, "process_config.tcp_listen_addr", &tcp_server->tcp_listen_addr)) {
+		return (-1);
+	}
+	if (!config_lookup_int(&MAIN_CTX->CFG, "process_config.tcp_listen_port", &tcp_server->tcp_listen_port)) {
 		return (-1);
 	}
 	tcp_server->listen_addr.sin_family = AF_INET;
-	tcp_server->listen_addr.sin_port = htons(tcp_server->listen_port);
+	tcp_server->listen_addr.sin_addr.s_addr = inet_addr(tcp_server->tcp_listen_addr);
+	tcp_server->listen_addr.sin_port = htons(tcp_server->tcp_listen_port);
 	tcp_server->listener = evconnlistener_new_bind(MAIN_CTX->evbase_main, listener_cb, NULL,
 			LEV_OPT_REUSEABLE|LEV_OPT_CLOSE_ON_FREE|LEV_OPT_THREADSAFE,
 			16, (struct sockaddr*)&tcp_server->listen_addr, sizeof(tcp_server->listen_addr));
 	if (tcp_server->listener == NULL) {
-		fprintf(stderr, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->listen_port);
+		fprintf(stderr, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->tcp_listen_port);
+		return (-1);
 	}
 
 	return (0);
@@ -149,6 +154,8 @@ void main_tick(int conn_fd, short events, void *data)
 
 int main()
 {
+	evthread_use_pthreads();
+
     /* create main */
     MAIN_CTX->evbase_main = event_base_new();
 

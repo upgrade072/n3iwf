@@ -109,3 +109,10 @@ void    create_ike_tag(ike_tag_t *ike_tag, struct sockaddr_in *from_addr);
 const   char *n3_msg_code_str(int msg_code);
 const   char *n3_res_code_str(int res_code);
 const   char *eap5g_msg_id_str(int msg_id);
+
+/* ------------------------- proc.c --------------------------- */
+void    proc_eap_init(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_eap_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_msg_request(int msg_code, int res_code, ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);

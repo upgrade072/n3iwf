@@ -31,7 +31,7 @@ void amf_regi(int conn_fd, short events, void *data)
 		return;
 	}
 
-	ngap_send_json(amf_ctx->hostname, JS_PRINT_COMPACT(MAIN_CTX->js_ng_setup_request));
+	ngap_send_json(amf_ctx->hostname, MAIN_CTX->js_ng_setup_request);
 }
 
 void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
@@ -78,6 +78,4 @@ void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_nga
 	amf_ctx_unset(amf_ctx);
 
 	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
-
-	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(amf_ctx->js_amf_data));
 }

@@ -54,7 +54,11 @@ int main(int argc, char **argv)
 
 	/* apply some rules TODO: unset this */
 	ossSetFlags(world, ossGetFlags(world) | AUTOMATIC_ENCDEC);
-	ossSetDebugFlags(world, ossGetDebugFlags(world) /*| PRINT_HEX_WITH_ASCII | OSS_DEBUG_LEVEL_3 */);
+#if 1
+	ossSetDebugFlags(world, ossGetDebugFlags(world));
+#else
+	ossSetDebugFlags(world, ossGetDebugFlags(world) | PRINT_HEX_WITH_ASCII | OSS_DEBUG_LEVEL_3 );
+#endif
 	int PDU_NUM = NGAP_PDU_PDU;
 
 	/* read f */
@@ -117,4 +121,6 @@ int main(int argc, char **argv)
 	ossFreeBuf(world, testbuf.value);
 
 	free(file_data);
+
+	fprintf(stderr, "program done\n");
 }

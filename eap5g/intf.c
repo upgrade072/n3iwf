@@ -57,12 +57,12 @@ void create_ike_tag(ike_tag_t *ike_tag, struct sockaddr_in *from_addr)
 const char *n3_msg_code_str(int msg_code)
 {   
     switch(msg_code) {
-        case N3_IKE_AUTH_INIT:
-            return "ike_auth_init";
         case N3_IKE_AUTH_REQ:
             return "ike_auth_req";
         case N3_IKE_AUTH_RES:
             return "ike_auth_res";
+		case N3_IKE_IPSEC_NOTI:
+			return "ike_ipsec_noti";
         case N3_IKE_INFORM_REQ:
             return "ike_inform_req";
         case N3_IKE_INFORM_RES:
@@ -82,6 +82,8 @@ const char *n3_res_code_str(int res_code)
             return "eap_init";
         case N3_EAP_REQUEST:
             return "eap_request";
+		case N3_EAP_RESPONSE:
+            return "eap_response";
         case N3_EAP_SUCCESS:
             return "eap_success";
         case N3_EAP_FAILURE:

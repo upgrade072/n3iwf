@@ -15,6 +15,8 @@
 #include <event2/util.h>
 #include <event2/thread.h>
 
+#include <sys/uio.h>
+
 #include <glib-2.0/glib.h>
 
 #include <libutil.h>
@@ -26,14 +28,23 @@
 
 #define MAX_WORKER_NUM      12
 
+// for tcp nas relay
+typedef struct nas_envelop_t {
+	uint16_t			length;
+	char				message[1];
+} nas_envelop_t;
+
+/*--------------------------------------------------------------*/
+
 typedef enum event_caller_t {
 	EC_MAIN = 0,
 	EC_WORKER
 } event_caller_t;
 
 typedef enum ngap_msg_enum_t {
-	DownlinkNASTransport	= 4,
-	NGSetupResponse			= 21,
+	DownlinkNASTransport		= 4,
+	InitialContextSetupRequest	= 14,
+	NGSetupResponse				= 21,
 } ngap_msg_enum_t;
 
 typedef struct amf_ctx_t {
@@ -58,7 +69,6 @@ typedef struct sock_ctx_t {
 	int    client_port;
 	time_t create_time;
 	struct bufferevent *bev;
-	struct event *ev_flush_cb;
 } sock_ctx_t;
 
 typedef struct ue_ctx_t {
@@ -76,6 +86,7 @@ typedef struct ue_ctx_t {
 	struct event *ev_timer;
 	int           ipsec_sa_created;
 
+	json_object	 *js_ue_regi_data;
 	GSList		 *temp_cached_nas_message;
 	sock_ctx_t	 *sock_ctx;
 } ue_ctx_t;
@@ -110,7 +121,8 @@ typedef struct worker_thread_t {
 } worker_thread_t;
 
 typedef struct tcp_ctx_t {
-	int					   listen_port;
+	const char			  *tcp_listen_addr;
+	int					   tcp_listen_port;
 	struct sockaddr_in	   listen_addr;
 	struct evconnlistener *listener;
 } tcp_ctx_t;
@@ -129,19 +141,39 @@ typedef struct main_ctx_t {
 	ue_info_t			ue_info;
 } main_ctx_t;
 
-/* ------------------------- ue.c --------------------------- */
-int     create_ue_list(main_ctx_t *MAIN_CTX);
-ue_ctx_t        *ue_ctx_assign(main_ctx_t *MAIN_CTX);
-void    ue_ctx_unset(ue_ctx_t *ue_ctx);
-ue_ctx_t        *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx);
-void    ue_ctx_stop_timer(ue_ctx_t *ue_ctx);
-void    ue_ctx_release(int conn_fd, short events, void *data);
-void    ue_assign_by_ike_auth(ike_msg_t *ike_msg);
-int     ue_compare_guami(an_param_t *an_param, json_object *js_guami);
-int     ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list);
-int     ue_compare_plmn_nssai(an_param_t *an_param, json_object *js_plmn_id);
-int     ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, json_object *js_plmn_id);
-void    ue_set_amf_by_an_param(ike_msg_t *ike_msg);
+/* ------------------------- ngap.c --------------------------- */
+int     ngap_get_amf_ue_ngap_id(json_object *js_ngap_pdu);
+int     ngap_get_ran_ue_ngap_id(json_object *js_ngap_pdu);
+const   char *ngap_get_nas_pdu(json_object *js_ngap_pdu);
+const   char *ngap_get_security_key(json_object *js_ngap_pdu);
+void    ngap_send_json(char *hostname, json_object *js_ngap);
+json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
+json_object     *create_initial_ue_message_json(int ue_id, char *nas_pdu, char *cause);
+json_object     *create_uplink_nas_transport_json(int amf_ue_id, int ran_ue_id, const char *nas_pdu);
+json_object     *create_initial_context_setup_response_json(const char *result, int amf_ue_id, int ran_ue_id);
+
+/* ------------------------- amf.c --------------------------- */
+int     create_amf_list(main_ctx_t *MAIN_CTX);
+void    amf_regi(int conn_fd, short events, void *data);
+void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
+void    amf_ctx_unset(amf_ctx_t *amf_ctx);
+void    amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_ngap_pdu);
+
+/* ------------------------- handler.c --------------------------- */
+void    eap_proc_5g_start(int conn_fd, short events, void *data);
+void    eap_proc_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+void    eap_proc_final(ue_ctx_t *ue_ctx, bool success);
+void    tcp_proc_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+void    ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    nas_relay_to_amf(ike_msg_t *ike_msg);
+void    nas_regi_to_amf(ike_msg_t *ike_msg);
+void    nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+
+/* ------------------------- test.c --------------------------- */
+int     ipaddr_range_calc(char *start, char *end);
+int     main();
 
 /* ------------------------- tcp.c --------------------------- */
 sock_ctx_t      *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index);
@@ -151,12 +183,39 @@ void    accept_sock_cb(int conn_fd, short events, void *data);
 void    accept_new_client(ue_ctx_t *ue_ctx, sock_ctx_t *sock_ctx);
 void    sock_event_cb(struct bufferevent *bev, short events, void *data);
 void    sock_read_cb(struct bufferevent *bev, void *data);
+void    sock_flush_cb(ue_ctx_t *ue_ctx);
 
-/* ------------------------- ngap.c --------------------------- */
-void    ngap_send_json(char *hostname, const char *body);
-json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
-json_object     *create_initial_ue_message_json(int ue_id, char *nas_pdu, char *cause);
-json_object     *create_uplink_nas_transport_json(int amf_ue_id, int ran_ue_id, const char *nas_pdu);
+/* ------------------------- io_worker.c --------------------------- */
+void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
+void    handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller);
+void    msg_rcv_from_ngapp(int conn_fd, short events, void *data);
+void    msg_rcv_from_eap5g(int conn_fd, short events, void *data);
+worker_ctx_t    *worker_ctx_get_by_index(int index);
+void    io_thrd_tick(int conn_fd, short events, void *data);
+void    *io_worker_thread(void *arg);
+
+/* ------------------------- send.c --------------------------- */
+uint8_t create_eap_id();
+void    eap_send_eap_request(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu);
+void    eap_send_final_eap(ue_ctx_t *ue_ctx, bool success);
+void    ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str);
+void    tcp_send_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+
+/* ------------------------- ue.c --------------------------- */
+int     create_ue_list(main_ctx_t *MAIN_CTX);
+ue_ctx_t        *ue_ctx_assign(main_ctx_t *MAIN_CTX);
+void    ue_assign_by_ike_auth(ike_msg_t *ike_msg);
+ue_ctx_t        *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx);
+void    ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state);
+void    ue_ctx_stop_timer(ue_ctx_t *ue_ctx);
+void    ue_ctx_release(int conn_fd, short events, void *data);
+void    ue_ctx_unset(ue_ctx_t *ue_ctx);
+int     ue_compare_guami(an_param_t *an_param, json_object *js_guami);
+int     ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list);
+int     ue_compare_plmn_nssai(an_param_t *an_param, json_object *js_plmn_id);
+int     ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, json_object *js_plmn_id);
+void    ue_set_amf_by_an_param(ike_msg_t *ike_msg);
+void    ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 
 /* ------------------------- main.c --------------------------- */
 int     load_config(config_t *CFG);
@@ -167,34 +226,3 @@ int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_c
 int     initialize(main_ctx_t *MAIN_CTX);
 void    main_tick(int conn_fd, short events, void *data);
 int     main();
-
-/* ------------------------- test.c --------------------------- */
-int     ipaddr_range_calc(char *start, char *end);
-int     main();
-
-/* ------------------------- io_worker.c --------------------------- */
-worker_ctx_t    *worker_ctx_get_by_index(int index);
-uint8_t create_eap_id();
-void    eap_req_snd_msg(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu);
-void    tcp_req_snd_msg(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu);
-void    eap_req_5g_start(int conn_fd, short events, void *data);
-void    eap_req_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-void    tcp_req_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-void    ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str);
-void    ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    nas_relay_to_amf(ike_msg_t *ike_msg);
-void    nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
-void    handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller);
-void    msg_rcv_from_ngapp(int conn_fd, short events, void *data);
-void    msg_rcv_from_eap5g(int conn_fd, short events, void *data);
-void    io_thrd_tick(int conn_fd, short events, void *data);
-void    *io_worker_thread(void *arg);
-
-/* ------------------------- amf.c --------------------------- */
-int     create_amf_list(main_ctx_t *MAIN_CTX);
-void    amf_regi(int conn_fd, short events, void *data);
-void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
-void    amf_ctx_unset(amf_ctx_t *amf_ctx);
-void    amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_ngap_pdu);

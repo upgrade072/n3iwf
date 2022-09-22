@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#pragma pack(push, 1)
+
 /*
 ==== EAP-5G ====
 Bits  ----------------
@@ -83,3 +85,5 @@ typedef enum establishment_cause {
 	AEC_MPS_PRIORITY	= 0x08,
 	AEC_MCS_PRIORITY	= 0x09
 } establishment_cause_t;
+
+#pragma pack(pop)

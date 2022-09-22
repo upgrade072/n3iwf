@@ -1,6 +1,7 @@
 #include <nwucp.h>
 
 extern main_ctx_t *MAIN_CTX;
+extern __thread worker_ctx_t *WORKER_CTX;
 
 int create_ue_list(main_ctx_t *MAIN_CTX)
 {
@@ -53,14 +54,22 @@ ue_ctx_t *ue_ctx_assign(main_ctx_t *MAIN_CTX)
 	return NULL;
 }
 
-void ue_ctx_unset(ue_ctx_t *ue_ctx)
+void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 {
-	ue_ctx_stop_timer(ue_ctx);
+	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	ue_ctx_t *ue_ctx = ue_ctx_assign(MAIN_CTX);
 
-	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
+	if (ue_ctx == NULL) {
+		fprintf(stderr, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
+		return;
+	}
+	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
+	memcpy(&ue_ctx->ctx_info, &n3iwf_msg->ctx_info, sizeof(ctx_info_t));
+	ue_ctx->ctx_info.cp_id = ue_ctx->index;
 
-	ue_ctx->state = NULL;
-	ue_ctx->occupied = 0;
+	worker_ctx_t *worker_ctx = worker_ctx_get_by_index(ue_ctx->index);
+
+	event_base_once(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, eap_proc_5g_start, ue_ctx, NULL);
 }
 
 ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
@@ -85,6 +94,14 @@ ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 	return ue_ctx;
 }
 
+void ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state)
+{
+	fprintf(stderr, "%s() ue_ctx (cp_id:%d up_id:%d) state change [%s]=>[%s]\n", 
+			__func__, ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, ue_ctx->state, new_state);
+
+	ue_ctx->state = new_state;
+}
+
 void ue_ctx_stop_timer(ue_ctx_t *ue_ctx)
 {
 	if (ue_ctx->ev_timer != NULL) {
@@ -100,22 +117,14 @@ void ue_ctx_release(int conn_fd, short events, void *data)
 	ue_ctx_unset(ue_ctx);
 }
 
-void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
+void ue_ctx_unset(ue_ctx_t *ue_ctx)
 {
-	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
-	ue_ctx_t *ue_ctx = ue_ctx_assign(MAIN_CTX);
+	ue_ctx_stop_timer(ue_ctx);
 
-	if (ue_ctx == NULL) {
-		fprintf(stderr, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
-		return;
-	}
-	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
-	memcpy(&ue_ctx->ctx_info, &n3iwf_msg->ctx_info, sizeof(ctx_info_t));
-	ue_ctx->ctx_info.cp_id = ue_ctx->index;
+	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
 
-	worker_ctx_t *worker_ctx = worker_ctx_get_by_index(ue_ctx->index);
-
-	event_base_once(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, eap_req_5g_start, ue_ctx, NULL);
+	ue_ctx->state = NULL;
+	ue_ctx->occupied = 0;
 }
 
 int ue_compare_guami(an_param_t *an_param, json_object *js_guami)
@@ -256,3 +265,52 @@ void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 	msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_worker_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 }
 
+void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+{
+    ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
+    if (ue_ctx == NULL) {
+        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
+        goto URRH_ERR;
+    } else {
+        fprintf(stderr, "{dbg} %s() success to get ue (index:%d)\n", __func__, ue_ctx->index);
+    }
+    
+    /* stop timer */
+    ue_ctx_stop_timer(ue_ctx);
+    
+    /* check ngap message, have mandatory */
+    int amf_ue_ngap_id = ngap_get_amf_ue_ngap_id(js_ngap_pdu);
+    int ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
+	const char *security_key = ngap_get_security_key(js_ngap_pdu);
+
+    if (amf_ue_ngap_id < 0 || ran_ue_ngap_id < 0 || security_key == NULL) {
+        fprintf(stderr, "{todo} %s() fail to get mandatory amf_id, ran_id, security_key!\n", __func__);
+        goto URRH_ERR;
+    } else {
+        ue_ctx->amf_tag.amf_ue_id = amf_ue_ngap_id;
+        ue_ctx->amf_tag.ran_ue_id = ran_ue_ngap_id;
+        fprintf(stderr, "{dbg} %s() recv amf_ue_id=(%d) ran_ue_id=(%d)\n",
+                __func__, ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id);
+    }
+
+	fprintf(stderr, "{TODO} %s() will reply security_key=[%s] with eap_success\n", __func__, security_key);
+
+	// TODO if pduSessionResourceSetupListCtx exist
+	// TODO if nas pdu exist
+
+	if (ue_ctx->js_ue_regi_data != NULL) {
+		fprintf(stderr, "{dbg} %s() check UE have old regi data, will replaced with new!\n", __func__);
+		json_object_put(ue_ctx->js_ue_regi_data);
+		ue_ctx->js_ue_regi_data = NULL;
+	}
+	json_object_deep_copy(js_ngap_pdu, &ue_ctx->js_ue_regi_data, NULL);
+
+	eap_proc_final(ue_ctx, true);
+
+	return;
+
+URRH_ERR:
+	if (ue_ctx != NULL) {
+		ue_ctx_unset(ue_ctx);
+	}
+}

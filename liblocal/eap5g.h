@@ -9,7 +9,7 @@
 
 /* ----------- EAP5G <--> NWUCP ------------------------------------------ */
 
-#pragma pack(1)
+#pragma pack(push, 1)
 
 typedef struct an_guami {
 	uint8_t set;
@@ -59,6 +59,8 @@ typedef struct eap_relay {
 #define MAX_NAS_STR		512
 	char			nas_str[MAX_NAS_STR];
 } eap_relay_t;
+
+#pragma pack(pop)
 
 /* ------------------------- eap5g.c --------------------------- */
 const   char *establish_cause_str(establishment_cause_t cause);

@@ -24,33 +24,16 @@ void handle_udp_request(int fd, short event, void *arg)
 	create_ike_tag(&ike_msg->ike_tag, &recv_buf->from_addr);
 	memcpy(&ike_msg->n3iwf_msg, n3iwf_msg, sizeof(n3iwf_msg_t)); /* for save tag */
 
-	fprintf(stderr, "\n(%s:%d)=>(%s) [%s] [%s] (up_id=%d cp_id=%d)\n",
+	fprintf(stderr, "\n(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			ike_msg->ike_tag.from_addr, ike_msg->ike_tag.from_port,
 			WORKER_CTX->thread_name,
 			n3_msg_code_str(n3iwf_msg->msg_code),
 			n3_res_code_str(n3iwf_msg->res_code),
+			n3iwf_msg->ctx_info.ue_id,
 			n3iwf_msg->ctx_info.up_id,
 			n3iwf_msg->ctx_info.cp_id);
 
-	eap_relay_t *eap_5g = &ike_msg->eap_5g;
-	an_param_t *an_param = &eap_5g->an_param;
-	switch (n3iwf_msg->msg_code) {
-		case N3_IKE_AUTH_INIT:
-			sprintf(ike_msg->ike_tag.ue_id, "%.127s", n3iwf_msg->payload);
-			msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-			break;
-		case N3_IKE_AUTH_REQ:
-			memset(eap_5g, 0x00, sizeof(eap_relay_t));
-			decap_eap_res(eap_5g, (unsigned char *)n3iwf_msg->payload, n3iwf_msg->payload_len);
-			/* if an_param exist, send to main, or send to cp_id related worker  */
-			if (an_param->set == 0) {
-				ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->DISTR_INFO.worker_num + 1;
-			}
-			msgsnd(an_param->set ? MAIN_CTX->QID_INFO.eap5g_nwucp_qid : MAIN_CTX->DISTR_INFO.worker_distr_qid, 
-					ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-
-			break;
-	}
+	proc_udp_request(n3iwf_msg->msg_code, n3iwf_msg->res_code, n3iwf_msg, ike_msg);
 
 HUR_END:
 	release_recv_buf(&MAIN_CTX->udp_buff, recv_buf);
@@ -63,16 +46,16 @@ void handle_ike_request(ike_msg_t *ike_msg)
 	n3iwf_msg_t *n3iwf_msg = (n3iwf_msg_t *)pdu_buff;
 	memcpy(n3iwf_msg, &ike_msg->n3iwf_msg, sizeof(n3iwf_msg_t));
 
-	fprintf(stderr, "\n(%s)=>(%s:%d) [%s] [%s] (up_id=%d cp_id=%d)\n",
+	fprintf(stderr, "\n(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			WORKER_CTX->thread_name,
 			ike_msg->ike_tag.from_addr, ike_msg->ike_tag.from_port,
 			n3_msg_code_str(n3iwf_msg->msg_code),
 			n3_res_code_str(n3iwf_msg->res_code),
+			n3iwf_msg->ctx_info.ue_id,
 			n3iwf_msg->ctx_info.up_id,
 			n3iwf_msg->ctx_info.cp_id);
 
-	eap_relay_t *eap_5g = &ike_msg->eap_5g;
-	n3iwf_msg->payload_len = encap_eap_req(eap_5g, (unsigned char *)n3iwf_msg->payload, 10240 - sizeof(n3iwf_msg_t));
+	proc_msg_request(n3iwf_msg->msg_code, n3iwf_msg->res_code, ike_msg, n3iwf_msg);
 
 	handle_pkg_htons(n3iwf_msg);
 
