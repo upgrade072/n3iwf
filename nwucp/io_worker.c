@@ -30,6 +30,9 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 		case InitialContextSetupRequest:
 			ue_regi_res_handle(ngap_msg, js_ngap_pdu);
 			break;
+		case PDUSessionResourceSetup:
+			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
+			break;
 		default:
 			/* we can't handle, just discard */
 			break;
@@ -60,6 +63,8 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 			return;
 		case N3_IKE_IPSEC_NOTI:
 			return nas_regi_to_amf(ike_msg);
+		case N3_CREATE_CHILD_SA_RES:
+			return ue_pdu_setup_res_handle(ike_msg);
 		default:
 			break;
 	}

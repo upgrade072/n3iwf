@@ -68,7 +68,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 
 	/* encode pdu - (to JER) */
 	ossSetEncodingRules(world, OSS_JSON);
-	ossSetJsonFlags(world, ossGetJsonFlags(world) | JSON_COMPACT_ENCODING);
+	ossSetJsonFlags(world, ossGetJsonFlags(world) | JSON_ENC_CONTAINED_AS_TEXT | JSON_COMPACT_ENCODING);
 	OssBuf json_buf = { .length = 0, .value = NULL };
 	if (ossEncode(world, PDU_NUM, ngap_pdu, &json_buf) != 0) {
 		fprintf(stderr, "%s() fail to encode [pdu -> json] !\n", __func__);

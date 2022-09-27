@@ -12,7 +12,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libglib-1.3.a \
 				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c
+SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN

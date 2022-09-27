@@ -50,13 +50,15 @@ void handle_pkg_htons(n3iwf_msg_t *n3iwf_msg)
 
 void create_ike_tag(ike_tag_t *ike_tag, struct sockaddr_in *from_addr)
 {
-	inet_ntop(AF_INET, &from_addr->sin_addr, ike_tag->from_addr, INET_ADDRSTRLEN);
-	ike_tag->from_port = ntohs(from_addr->sin_port);
+	inet_ntop(AF_INET, &from_addr->sin_addr, ike_tag->up_from_addr, INET_ADDRSTRLEN);
+	ike_tag->up_from_port = ntohs(from_addr->sin_port);
 }
 
 const char *n3_msg_code_str(int msg_code)
 {   
     switch(msg_code) {
+        case N3_MSG_UNSET:
+            return "n3_msg_unset";
         case N3_IKE_AUTH_REQ:
             return "ike_auth_req";
         case N3_IKE_AUTH_RES:
@@ -78,6 +80,8 @@ const char *n3_msg_code_str(int msg_code)
 const char *n3_res_code_str(int res_code)
 {   
     switch (res_code) {
+        case N3_RES_UNSET:
+            return "n3_res_unset";
         case N3_EAP_INIT:
             return "eap_init";
         case N3_EAP_REQUEST:
@@ -88,6 +92,16 @@ const char *n3_res_code_str(int res_code)
             return "eap_success";
         case N3_EAP_FAILURE:
             return "eap_failure";
+		case N3_IPSEC_CREATE_SUCCESS:
+			return "ipsec_create_success";
+		case N3_IPSEC_CREATE_FAILURE:
+			return "ipsec_create_failure";
+		case N3_PDU_CREATE_REQUEST:
+			return "pdu_create_request";
+		case N3_PDU_CREATE_SUCCESS:
+			return "pdu_create_success";
+		case N3_PDU_CREATE_FAILURE:
+			return "pdu_create_failure";
         default:
             return "unknown";
     }

@@ -8,26 +8,32 @@
 #include <json-c/json_object.h>
 
 #include <libutil.h>
-#include <libdata.h>
 #include <json_macro.h>
+
+#define PDUSessionResourceSetupResponse_JSON "{\"successfulOutcome\":{\"procedureCode\":29,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":1},{\"id\":85,\"criticality\":\"ignore\",\"value\":0},{\"id\":75,\"criticality\":\"ignore\",\"value\":[]}]}}}"
+
+#define PDUSessionItem_JSON "{\"pDUSessionID\":1,\"pDUSessionResourceSetupResponseTransfer\":{\"containing\":{\"dLQosFlowPerTNLInformation\":{\"uPTransportLayerInformation\":{\"gTPTunnel\":{\"transportLayerAddress\":{\"value\":\"0AC8C802\",\"length\":32},\"gTP-TEID\":\"00000001\"}},\"associatedQosFlowList\":[]}}}}"
 
 int main()
 {
-	size_t read_size = 0;
-	char *js_text = file_to_buffer("./test.json", "r", &read_size);
-	json_object *js_tok = json_tokener_parse(js_text);
-	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(js_tok));
+	json_object *js_pdu_session_resource_setup_response = json_tokener_parse(PDUSessionResourceSetupResponse_JSON);
 
-	key_list_t key_list = {0,};
-	json_object *js_value = search_json_object_ex(js_tok, "/NGAP-PDU/*/value/*/protocolIEs/*/value/RAN-UE-NGAP-ID", &key_list);
+	json_object *js_pdu_session_item = json_tokener_parse(PDUSessionItem_JSON);
 
-	int value = json_object_get_int(js_value);
-	fprintf(stderr, "{dbg} [%s] %d depth=(%d)\n", js_value == NULL ? "nil" : "exist", value, key_list.depth);
+	key_list_t key_pdu_session_val = {0,};
+	json_object *js_pdu_session_val = search_json_object_ex(js_pdu_session_resource_setup_response, "/*/value/protocolIEs/{id:75, value}", &key_pdu_session_val);
 
-	for (int i = 0; i < key_list.key_num; i++) {
-		fprintf(stderr, "{dbg} %d %s\n", i, key_list.key_val[i]);
+	json_object *js_qos_flow_ids = search_json_object(js_pdu_session_item, "/pDUSessionResourceSetupResponseTransfer/containing/dLQosFlowPerTNLInformation/associatedQosFlowList");
+	for (int i = 0; i < 3; i++) {
+		json_object *js_new = json_object_new_object();
+		json_object_object_add(js_new, "qosFlowIdentifier", json_object_new_int(9));
+		fprintf(stderr, "%s\n", JS_PRINT_PRETTY(js_new));
+		json_object_array_add(js_qos_flow_ids, js_new);
 	}
 
-	json_object_put(js_tok);
-	free(js_text);
+	json_object_array_add(js_pdu_session_val, js_pdu_session_item);
+
+	fprintf(stderr, "%s\n", JS_PRINT_PRETTY(js_pdu_session_resource_setup_response));
+
+	json_object_put(js_pdu_session_resource_setup_response);
 }

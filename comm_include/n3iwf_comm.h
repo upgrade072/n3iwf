@@ -6,7 +6,8 @@
 #pragma pack(push, 1)
 
 typedef enum n3iwf_msgcode_t {
-	N3_IKE_AUTH_REQ = 1,
+	N3_MSG_UNSET = 0,
+	N3_IKE_AUTH_REQ,
 	N3_IKE_AUTH_RES,
 	N3_IKE_IPSEC_NOTI,
 	N3_IKE_INFORM_REQ,
@@ -16,13 +17,17 @@ typedef enum n3iwf_msgcode_t {
 } n3iwf_msgcode_t;
 
 typedef enum n3iwf_rescode_t {
-	N3_EAP_INIT = 1,			/* n3_eap_init_t */
+	N3_RES_UNSET = 0,
+	N3_EAP_INIT,				/* n3_eap_init_t */
 	N3_EAP_REQUEST,				/* [eap] */
 	N3_EAP_RESPONSE,			/* [eap] */
 	N3_EAP_SUCCESS,				/* n3_eap_result_t */
 	N3_EAP_FAILURE,				/* n3_eap_result_t */
 	N3_IPSEC_CREATE_SUCCESS,	/* no payload */
 	N3_IPSEC_CREATE_FAILURE,	/* no payload */
+	N3_PDU_CREATE_REQUEST,		/* n3_pdu_sess_t */
+	N3_PDU_CREATE_SUCCESS, 		/* n3_pdu_sess_t */
+	N3_PDU_CREATE_FAILURE,		/* no payload */
 	/* .... */
 } n3iwf_rescode_t;
 
@@ -49,7 +54,7 @@ typedef struct n3_eap_init_t {
 } n3_eap_init_t;
 
 typedef struct n3_eap_result_t {
-	char		eap_payload[4];	/* eap relay (success or fail) */
+	char		eap_payload[4];			/* eap relay (success or fail) */
 
 	char		tcp_server_ip[INET_ADDRSTRLEN];
 	uint16_t	tcp_server_port;
@@ -57,5 +62,27 @@ typedef struct n3_eap_result_t {
 	uint8_t		internal_netmask;
 	char		security_key_str[64 + 1];
 } n3_eap_result_t;
+
+typedef struct n3_pdu_sess_t {
+	uint8_t		session_id;
+	uint32_t	pdu_sess_ambr_dl;		/* if N3_PDU_CREATE_REQUEST only */
+	uint32_t	pdu_sess_ambr_ul;		/* if N3_PDU_CREATE_REQUEST only */
+	char		gtp_te_addr[INET6_ADDRSTRLEN];
+	char		gtp_te_id[8 + 1];
+	uint8_t		address_family;			/* AF_INET | AF_INET6 */
+
+#define MAX_N3_QOS_FLOW_IDS		8
+	uint8_t		qos_flow_id_num;
+	uint8_t		qos_flow_id[MAX_N3_QOS_FLOW_IDS];
+} n3_pdu_sess_t;
+
+#define N3_PDU_INFO_SIZE(a)	(sizeof(n3_pdu_info_t) - sizeof(n3_pdu_sess_t) + a->pdu_num * (sizeof(n3_pdu_sess_t)))
+typedef struct n3_pdu_info_t {
+	uint32_t		ue_ambr_dl;			/* if N3_PDU_CREATE_REQUEST only */
+	uint32_t		ue_ambr_ul;			/* if N3_PDU_CREATE_REQUEST only */
+#define MAX_N3_PDU_NUM			12
+	uint8_t			pdu_num;
+	n3_pdu_sess_t	pdu_sessions[MAX_N3_PDU_NUM];
+} n3_pdu_info_t;
 
 #pragma pack(pop)

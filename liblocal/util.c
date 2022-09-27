@@ -255,6 +255,39 @@ void hex_to_mem(char *input, char *output, size_t *output_size)
 	}
 }
 
+void ipaddr_to_hex(const char *ip_str, char *hex_str)
+{
+    uint32_t ip_addr = inet_addr(ip_str);
+    ip_addr = htonl(ip_addr);
+
+    sprintf(hex_str, "%02X%02X%02X%02X",
+            (ip_addr & 0xFF000000) >> 24,
+            (ip_addr & 0x00FF0000) >> 16,
+            (ip_addr & 0x0000FF00) >> 8,
+            (ip_addr & 0x000000FF) );
+}
+
+int ip_num_to_subnet(int ip_num)
+{
+	int host_cnt = 1;
+	int subnet = 32;
+	for (; subnet >= 8; subnet--) {
+		if (ip_num <= host_cnt)
+			break;
+		host_cnt = host_cnt * 2;
+	}
+
+	return subnet;
+}
+
+void ipaddr_hex_to_inet(const char *hex_ip_str, char *inet_ip_str)
+{
+	int a,b,c,d;
+	sscanf(hex_ip_str, "%02X%02X%02X%02X", &a, &b, &c, &d);
+
+	sprintf(inet_ip_str, "%d.%d.%d.%d", a, b, c, d);
+}
+
 char *ipaddr_increaser(char *input_str)
 {   
 	char class_a[4] = {0,};

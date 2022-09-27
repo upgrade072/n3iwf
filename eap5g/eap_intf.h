@@ -5,14 +5,17 @@
 #include <eap5g.h>
 
 typedef struct ike_tag_t {
-	char		from_addr[INET_ADDRSTRLEN];
-	int			from_port;
-	char		amf_host[128];
+	char        ue_from_addr[INET_ADDRSTRLEN];
+	uint16_t    ue_from_port;
+	char		up_from_addr[INET_ADDRSTRLEN];
+	uint16_t	up_from_port;
+	char		cp_amf_host[128];
 } ike_tag_t;
 
 typedef union ike_data_t {
 	n3_eap_init_t	eap_init;
 	n3_eap_result_t eap_result;
+	n3_pdu_info_t	pdu_info;
 } ike_data_t;
 
 typedef struct ike_msg_t {

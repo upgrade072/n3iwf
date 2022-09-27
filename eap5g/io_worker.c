@@ -6,7 +6,7 @@ static __thread worker_ctx_t *WORKER_CTX;
 void handle_udp_request(int fd, short event, void *arg)
 {   
 	recv_buf_t *recv_buf = (recv_buf_t *)arg;
-	if (recv_buf->size < sizeof(n3iwf_msg_t)) {
+	if (recv_buf->size < (sizeof(n3iwf_msg_t) - 1)) {
 		fprintf(stderr, "%s() recv insufficient packet len!\n", __func__);
 		goto HUR_END;
 	}
@@ -25,7 +25,7 @@ void handle_udp_request(int fd, short event, void *arg)
 	memcpy(&ike_msg->n3iwf_msg, n3iwf_msg, sizeof(n3iwf_msg_t)); /* for save tag */
 
 	fprintf(stderr, "\n(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
-			ike_msg->ike_tag.from_addr, ike_msg->ike_tag.from_port,
+			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			WORKER_CTX->thread_name,
 			n3_msg_code_str(n3iwf_msg->msg_code),
 			n3_res_code_str(n3iwf_msg->res_code),
@@ -48,7 +48,7 @@ void handle_ike_request(ike_msg_t *ike_msg)
 
 	fprintf(stderr, "\n(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			WORKER_CTX->thread_name,
-			ike_msg->ike_tag.from_addr, ike_msg->ike_tag.from_port,
+			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			n3_msg_code_str(n3iwf_msg->msg_code),
 			n3_res_code_str(n3iwf_msg->res_code),
 			n3iwf_msg->ctx_info.ue_id,
@@ -63,7 +63,7 @@ void handle_ike_request(ike_msg_t *ike_msg)
 	struct sockaddr_in to_addr;
 	memset(&to_addr, 0x00, sizeof(to_addr));
 	to_addr.sin_family = AF_INET;
-	to_addr.sin_addr.s_addr = inet_addr(ike_msg->ike_tag.from_addr);
+	to_addr.sin_addr.s_addr = inet_addr(ike_msg->ike_tag.up_from_addr);
 	to_addr.sin_port = htons(MAIN_CTX->ike_listen_port);
 
 	sendfromto(WORKER_CTX->udp_sock, n3iwf_msg, N3IWF_MSG_SIZE(n3iwf_msg), 0, NULL, 0, (struct sockaddr *)&to_addr, tl);

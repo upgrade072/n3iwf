@@ -4,10 +4,21 @@ extern main_ctx_t *MAIN_CTX;
 
 void proc_eap_init(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 {
-	n3_eap_init_t *eap_init	= &ike_msg->ike_data.eap_init; 
-	eap_init->ue_from_port = htons(eap_init->ue_from_port);
-	memcpy(eap_init, n3iwf_msg->payload, sizeof(n3_eap_init_t));
+	n3_eap_init_t *eap_init	= (n3_eap_init_t *)n3iwf_msg->payload;
+
+	sprintf(ike_msg->ike_tag.ue_from_addr, "%s", eap_init->ue_from_addr);
+	ike_msg->ike_tag.ue_from_port = ntohs(eap_init->ue_from_port);
+
+	fprintf(stderr, "{DBG} %s() recv from ue (%s:%d)\n", __func__, ike_msg->ike_tag.ue_from_addr, ike_msg->ike_tag.ue_from_port);
+
 	msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
+}
+
+void proc_eap_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
+{
+	eap_relay_t *eap_5g = &ike_msg->eap_5g;
+
+	n3iwf_msg->payload_len = encap_eap_req(eap_5g, (unsigned char *)n3iwf_msg->payload, 10240 - sizeof(n3iwf_msg_t));
 }
 
 void proc_eap_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
@@ -17,6 +28,7 @@ void proc_eap_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 
 	memset(eap_5g, 0x00, sizeof(eap_relay_t));
 	decap_eap_res(eap_5g, (unsigned char *)n3iwf_msg->payload, n3iwf_msg->payload_len);
+
 	/* if an_param exist, send to main, or send to cp_id related worker  */
 	if (an_param->set == 0) {
 		ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->DISTR_INFO.worker_num + 1;
@@ -31,13 +43,6 @@ void proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 	msgsnd(MAIN_CTX->DISTR_INFO.worker_distr_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 }
 
-void proc_eap_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
-{
-	eap_relay_t *eap_5g = &ike_msg->eap_5g;
-
-	n3iwf_msg->payload_len = encap_eap_req(eap_5g, (unsigned char *)n3iwf_msg->payload, 10240 - sizeof(n3iwf_msg_t));
-}
-
 void proc_eap_result(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 {
 	n3_eap_result_t *eap_result = (n3_eap_result_t *)n3iwf_msg->payload;
@@ -47,6 +52,20 @@ void proc_eap_result(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 	eap_relay_t *eap_5g = &ike_msg->eap_5g;
 	encap_eap_result(eap_5g, (unsigned char *)eap_result->eap_payload, 4);
 	n3iwf_msg->payload_len = sizeof(n3_eap_result_t);
+}
+
+void proc_pdu_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
+{
+	n3_pdu_info_t *pdu_info = (n3_pdu_info_t *)n3iwf_msg->payload;
+	memcpy(pdu_info, &ike_msg->ike_data.pdu_info, N3_PDU_INFO_SIZE(pdu_info));
+
+	for (int i = 0; i < pdu_info->pdu_num; i++) {
+		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
+		pdu_sess->pdu_sess_ambr_dl = htonl(pdu_sess->pdu_sess_ambr_dl);
+		pdu_sess->pdu_sess_ambr_ul = htonl(pdu_sess->pdu_sess_ambr_ul);
+	}
+
+	n3iwf_msg->payload_len = N3_PDU_INFO_SIZE(pdu_info);
 }
 
 void proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
@@ -74,5 +93,7 @@ void proc_msg_request(int msg_code, int res_code, ike_msg_t *ike_msg, n3iwf_msg_
 			} else {
 				return proc_eap_result(ike_msg, n3iwf_msg);
 			}
+		case N3_CREATE_CHILD_SA_REQ:
+			return proc_pdu_request(ike_msg, n3iwf_msg);
 	}
 }
