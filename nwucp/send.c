@@ -110,6 +110,29 @@ void ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
 }
 
+void ike_send_inform_request(ue_ctx_t *ue_ctx, int res_code)
+{
+	/* make IKE_AUTH_RES */
+	ike_msg_t msg = { .mtype = 1 }, *ike_msg = &msg;
+	// ue_id part
+	memcpy(&ike_msg->ike_tag, &ue_ctx->ike_tag, sizeof(ike_tag_t));
+	// n3iwf_msg part
+	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	n3iwf_msg->msg_code = N3_IKE_INFORM_REQ;
+	n3iwf_msg->res_code = res_code;
+	memcpy(&n3iwf_msg->ctx_info, &ue_ctx->ctx_info, sizeof(ctx_info_t));
+
+	/* start timer */
+	ue_ctx_stop_timer(ue_ctx);
+	struct timeval tmout_sec = { N3_EXPIRE_TM_SEC, 0 };
+	ue_ctx->ev_timer = event_new(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx);
+	event_add(ue_ctx->ev_timer, &tmout_sec);
+
+	/* send message to EAP5G */
+	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
+	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+}
+
 void ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
 {
 	json_object *js_uplink_nas_transport_message = 

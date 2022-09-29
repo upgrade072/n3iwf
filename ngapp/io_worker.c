@@ -48,6 +48,23 @@ HNS_END:
 	buffer->occupied = 0;
 }
 
+json_object *extract_distr_key(json_object *js_ngap_pdu, key_list_t *key_list)
+{
+	config_setting_t *cf_distr_rule = config_lookup(&MAIN_CTX->CFG, "distr_info.ngap_distr_rule");
+	json_object	*js_distr_key = NULL;
+
+	for (int i = 0; i < config_setting_length(cf_distr_rule); i++) {
+		const char *distr_rule = config_setting_get_string_elem(cf_distr_rule, i);
+		memset(key_list, 0x00, sizeof(key_list_t) - sizeof(key_list->key_val));
+		js_distr_key = search_json_object_ex(js_ngap_pdu, distr_rule, key_list);
+		if (js_distr_key != NULL) {
+			return js_distr_key;
+		}
+	}
+
+	return NULL;
+}
+
 void handle_ngap_recv(int conn_fd, short events, void *data)
 {
 	recv_buf_t *buffer = (recv_buf_t *)data;
@@ -76,10 +93,11 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 		goto HNR_END;
 	}
 
-	/* distr rule */
+	/* check distr rule */
+	json_object	*js_ngap_pdu = json_tokener_parse((const char *)json_buf.value);
 	key_list_t key_list = {0,};
-	json_object *js_ngap_pdu = json_tokener_parse((const char *)json_buf.value);
-	json_object *js_distr_key = search_json_object_ex(js_ngap_pdu, MAIN_CTX->DISTR_INFO.ngap_distr_rule, &key_list);
+	json_object	*js_distr_key = extract_distr_key(js_ngap_pdu, &key_list);
+
 	int distr_id = js_distr_key == NULL ?  -1 : json_object_get_int(js_distr_key);
 	int qid = distr_id < 0 ?  MAIN_CTX->QID_INFO.ngapp_nwucp_qid : MAIN_CTX->DISTR_INFO.worker_distr_qid;
 	json_object_put(js_ngap_pdu);

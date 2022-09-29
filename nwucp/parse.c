@@ -1,22 +1,22 @@
 #include <nwucp.h>
 extern main_ctx_t *MAIN_CTX;
 
-int ngap_get_amf_ue_ngap_id(json_object *js_ngap_pdu)
+int64_t ngap_get_amf_ue_ngap_id(json_object *js_ngap_pdu)
 {
 	key_list_t key_amf_ue_ngap_id = {0,};
 	json_object *js_amf_ue_ngap_id = 
 		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:10, value}", &key_amf_ue_ngap_id);
 
-	return js_amf_ue_ngap_id == NULL ? -1 : json_object_get_int(js_amf_ue_ngap_id);
+	return js_amf_ue_ngap_id == NULL ? -1 : json_object_get_int64(js_amf_ue_ngap_id);
 }
 
-int ngap_get_ran_ue_ngap_id(json_object *js_ngap_pdu)
+int64_t ngap_get_ran_ue_ngap_id(json_object *js_ngap_pdu)
 {
 	key_list_t key_ran_ue_ngap_id = {0,};
 	json_object *js_ran_ue_ngap_id = 
 		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:85, value}", &key_ran_ue_ngap_id);
 
-	return js_ran_ue_ngap_id == NULL ? -1 : json_object_get_int(js_ran_ue_ngap_id);
+	return js_ran_ue_ngap_id == NULL ? -1 : json_object_get_int64(js_ran_ue_ngap_id);
 }
 
 const char *ngap_get_nas_pdu(json_object *js_ngap_pdu)
@@ -127,3 +127,29 @@ json_object *ngap_get_pdu_qos_flow_ids(json_object *js_pdu_sess_elem)
 	return js_pdu_qos_flow_ids;
 }
 
+int64_t ngap_get_ctx_rel_amf_ue_ngap_id(json_object *js_ngap_pdu)
+{
+	key_list_t key_amf_ue_ngap_id = {0,};
+	json_object *js_amf_ue_ngap_id = 
+		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:114, value}/uE-NGAP-ID-pair/aMF-UE-NGAP-ID", &key_amf_ue_ngap_id);
+
+	return js_amf_ue_ngap_id == NULL ? -1 : json_object_get_int64(js_amf_ue_ngap_id);
+}
+
+int64_t ngap_get_ctx_rel_ran_ue_ngap_id(json_object *js_ngap_pdu)
+{
+	key_list_t key_ran_ue_ngap_id = {0,};
+	json_object *js_ran_ue_ngap_id = 
+		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:114, value}/uE-NGAP-ID-pair/rAN-UE-NGAP-ID", &key_ran_ue_ngap_id);
+
+	return js_ran_ue_ngap_id == NULL ? -1 : json_object_get_int64(js_ran_ue_ngap_id);
+}
+
+const char *ngap_get_ctx_rel_cause(json_object *js_ngap_pdu)
+{
+	key_list_t key_rel_cause = {0,};
+	json_object *js_rel_cause = 
+		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:15, value}/*/", &key_rel_cause);
+
+	return js_rel_cause == NULL ? NULL : json_object_get_string(js_rel_cause);
+}

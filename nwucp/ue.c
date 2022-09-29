@@ -117,6 +117,32 @@ void ue_ctx_release(int conn_fd, short events, void *data)
 {
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
 
+	memset(&ue_ctx->ike_tag, 0x00, sizeof(ike_tag_t));
+	memset(&ue_ctx->amf_tag, 0x00, sizeof(amf_tag_t));
+	memset(&ue_ctx->ctx_info, 0x00, sizeof(ctx_info_t));
+	memset(&ue_ctx->eap_5g, 0x00, sizeof(eap_relay_t));
+
+	ue_ctx->state = NULL;
+	ue_ctx_stop_timer(ue_ctx);
+	ue_ctx->ipsec_sa_created = 0;
+
+	if (ue_ctx->js_ue_regi_data != NULL) {
+		json_object_put(ue_ctx->js_ue_regi_data);
+		ue_ctx->js_ue_regi_data = NULL;
+	}
+	if (ue_ctx->security_key != NULL) {
+		free(ue_ctx->security_key);
+		ue_ctx->security_key = NULL;
+	}
+
+	sock_flush_temp_nas_pdu(ue_ctx);
+	pdu_proc_flush_ctx(ue_ctx);
+
+	if (ue_ctx->sock_ctx != NULL) {
+		release_sock_ctx(ue_ctx->sock_ctx);
+		ue_ctx->sock_ctx = NULL;
+	}
+
 	ue_ctx_unset(ue_ctx);
 }
 
@@ -270,8 +296,8 @@ void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 
 int ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
 {
-    int amf_ue_ngap_id = ngap_get_amf_ue_ngap_id(js_ngap_pdu);
-    int ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
+    uint32_t amf_ue_ngap_id = ngap_get_amf_ue_ngap_id(js_ngap_pdu);
+    uint32_t ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
 
     if (amf_ue_ngap_id < 0 || ran_ue_ngap_id < 0) {
         fprintf(stderr, "{todo} %s() fail cause ngap_id not exist!\n", __func__);
@@ -283,127 +309,3 @@ int ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
 	}
 }
 
-void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
-{
-    ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
-    if (ue_ctx == NULL) {
-        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
-        goto URRH_ERR;
-    } else {
-        fprintf(stderr, "{dbg} %s() success to get ue (index:%d)\n", __func__, ue_ctx->index);
-    }
-    
-    /* stop timer */
-    ue_ctx_stop_timer(ue_ctx);
-    
-    /* check ngap message, have mandatory */
-	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
-		fprintf(stderr, "%s() fail cause ngap_id not exist!\n", __func__);
-		goto URRH_ERR;
-	}
-
-	const char *security_key = ngap_get_security_key(js_ngap_pdu);
-    if (security_key == NULL) {
-		fprintf(stderr, "%s() fail cause security_key not exist!\n", __func__);
-        goto URRH_ERR;
-    }
-	if (ue_ctx->security_key != NULL) {
-		free(ue_ctx->security_key);
-		ue_ctx->security_key = NULL;
-	}
-	ue_ctx->security_key = strdup(security_key);
-
-	// TODO if pduSessionResourceSetupListCtx exist
-	// TODO if nas pdu exist
-
-	if (ue_ctx->js_ue_regi_data != NULL) {
-		fprintf(stderr, "{dbg} %s() check UE have old regi data, will replaced with new!\n", __func__);
-		json_object_put(ue_ctx->js_ue_regi_data);
-		ue_ctx->js_ue_regi_data = NULL;
-	}
-	json_object_deep_copy(js_ngap_pdu, &ue_ctx->js_ue_regi_data, NULL);
-
-	eap_proc_final(ue_ctx, true, security_key);
-
-	return;
-
-URRH_ERR:
-	eap_proc_final(ue_ctx, false, NULL);
-
-	if (ue_ctx != NULL) {
-		ue_ctx_unset(ue_ctx);
-	}
-}
-
-void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
-{
-    ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
-    if (ue_ctx == NULL) {
-        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
-        goto UPSH_ERR;
-    } else {
-        fprintf(stderr, "{dbg} %s() success to get ue (index:%d)\n", __func__, ue_ctx->index);
-    }
-    
-    /* stop timer */
-    ue_ctx_stop_timer(ue_ctx);
-
-    /* check ngap message, have mandatory */
-	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
-		fprintf(stderr, "%s() fail cause ngap_id not exist!\n", __func__);
-		goto UPSH_ERR;
-	}
-
-	n3_pdu_info_t pdu_buffer = {0,}, *pdu_info = &pdu_buffer;
-
-	pdu_info->ue_ambr_dl = ngap_get_ue_ambr_dl(js_ngap_pdu);
-	pdu_info->ue_ambr_ul = ngap_get_ue_ambr_ul(js_ngap_pdu);
-	if (pdu_info->ue_ambr_dl < 0 || pdu_info->ue_ambr_ul < 0) {
-		fprintf(stderr, "%s() fail cause ue_ambr not exist!\n", __func__);
-		goto UPSH_ERR;
-	}
-
-	key_list_t key_pdu_session_resource_setup_list_su_req = {0,};
-	json_object *js_pdu_session_resource_setup_list_su_req = 
-		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:74, value}/", &key_pdu_session_resource_setup_list_su_req);
-
-	if (js_pdu_session_resource_setup_list_su_req == NULL) {
-        fprintf(stderr, "{todo} %s() fail cause pdu_session_resource_setup_list_su_req not exist!\n", __func__);
-        goto UPSH_ERR;
-	}
-
-	pdu_info->pdu_num = 
-		pdu_proc_fill_pdu_sess_setup_list(ue_ctx, js_pdu_session_resource_setup_list_su_req, pdu_info->pdu_sessions);
-
-	ike_proc_pdu_request(ue_ctx, pdu_info);
-
-	return;
-
-UPSH_ERR:
-	fprintf(stderr, "{todo} %s() must to something!\n", __func__);
-
-	if (ue_ctx != NULL) {
-		ue_ctx_unset(ue_ctx);
-	}
-}
-
-void ue_pdu_setup_res_handle(ike_msg_t *ike_msg)
-{
-	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
-	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
-
-	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() called null ue_ctx! reply to UP fail response\n", __func__);
-		return;
-	}
-	ue_ctx_stop_timer(ue_ctx);
-
-	if (n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS) {
-		/* send tcp-nas-pdu_accept */
-		g_slist_foreach(ue_ctx->pdu_ctx_list, (GFunc)pdu_proc_sess_establish_accept, ue_ctx);
-	} else {
-		pdu_proc_flush_ctx(ue_ctx);
-	}
-
-	return ngap_proc_pdu_session_resource_setup_response(ue_ctx, ike_msg);
-}

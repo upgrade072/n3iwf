@@ -85,14 +85,10 @@ typedef struct main_ctx_t {
 	int ike_listen_port;
 } main_ctx_t;
 
+
 /* ------------------------- comm.c --------------------------- */
 recv_buf_t      *get_recv_buf(recv_buff_t *recv_buff);
 void    release_recv_buf(recv_buff_t *recv_buff, recv_buf_t *recv_buf);
-
-/* ------------------------- main.c --------------------------- */
-int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
-int     main();
 
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_udp_request(int fd, short event, void *arg);
@@ -100,6 +96,23 @@ void    handle_ike_request(ike_msg_t *ike_msg);
 void    msg_rcv_from_nwucp(int fd, short event, void *arg);
 void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
 void    *io_worker_thread(void *arg);
+
+/* ------------------------- proc.c --------------------------- */
+void    proc_eap_init(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_eap_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);
+void    proc_eap_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_inform_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_eap_result(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);
+void    proc_pdu_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);
+void    proc_pdu_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
+void    proc_msg_request(int msg_code, int res_code, ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);
+
+/* ------------------------- main.c --------------------------- */
+int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+int     main();
 
 /* ------------------------- intf.c --------------------------- */
 void    udp_sock_read_callback(int fd, short event, void *arg);
@@ -109,10 +122,3 @@ void    create_ike_tag(ike_tag_t *ike_tag, struct sockaddr_in *from_addr);
 const   char *n3_msg_code_str(int msg_code);
 const   char *n3_res_code_str(int res_code);
 const   char *eap5g_msg_id_str(int msg_id);
-
-/* ------------------------- proc.c --------------------------- */
-void    proc_eap_init(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
-void    proc_eap_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
-void    proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
-void    proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg);
-void    proc_msg_request(int msg_code, int res_code, ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg);

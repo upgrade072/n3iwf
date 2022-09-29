@@ -102,6 +102,8 @@ const char *n3_res_code_str(int res_code)
 			return "pdu_create_success";
 		case N3_PDU_CREATE_FAILURE:
 			return "pdu_create_failure";
+		case N3_IPSEC_DELETE_PAYLOAD:
+			return "ipsec_delete_payload";
         default:
             return "unknown";
     }

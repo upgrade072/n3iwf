@@ -13,6 +13,7 @@ sock_ctx_t *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index)
 	sprintf(sock_ctx->client_ipaddr, "%s", util_get_ip_from_sa(sa));
 	sock_ctx->client_port = util_get_port_from_sa(sa);
 	time(&sock_ctx->create_time);
+	sock_ctx->remain_size = 0;
 
 	return sock_ctx;
 }
@@ -22,6 +23,11 @@ void release_sock_ctx(sock_ctx_t *sock_ctx)
 	fprintf(stderr, "%s() called sock from(%s:%d) fd(%d) (%.19s~) closed!\n",
 			__func__, sock_ctx->client_ipaddr, sock_ctx->client_port, sock_ctx->sock_fd, ctime(&sock_ctx->create_time));
 
+	if (sock_ctx->bev) {
+		bufferevent_free(sock_ctx->bev);
+		sock_ctx->bev = NULL;
+	}
+
 	close(sock_ctx->sock_fd);
 	free(sock_ctx);
 }
@@ -29,7 +35,6 @@ void release_sock_ctx(sock_ctx_t *sock_ctx)
 /* handle by main */
 void listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sa, int socklen, void *data)
 {
-	fprintf(stderr, "{dbg} %s called! (main) (fd:%d)\n", __func__, fd);
 	/* 1) check ue src ip */
 	/* 2) get ue ctx */
 	/* 3) get worker_ctx (ue_ctx) */
@@ -37,6 +42,8 @@ void listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct soc
 
 	char client_ip[INET_ADDRSTRLEN] = {0,};
 	sprintf(client_ip, "%s", util_get_ip_from_sa(sa));
+
+	fprintf(stderr, "{dbg} %s called! (main) (from:%s)(fd:%d)\n", __func__, client_ip, fd);
 
 	int ue_index = ipaddr_range_calc(MAIN_CTX->ue_info.ue_start_ip, client_ip);
 	if (ue_index < 0 || ue_index >= MAIN_CTX->ue_info.ue_num) {
@@ -76,6 +83,7 @@ void accept_sock_cb(int conn_fd, short events, void *data)
 
 	/* release older sock if exist */
 	if (ue_ctx->sock_ctx != NULL) {
+		fprintf(stderr, "{DBG} %s() check OLD CONN, release!\n", __func__);
 		release_sock_ctx(ue_ctx->sock_ctx);
 		ue_ctx->sock_ctx = NULL;
 	}
@@ -121,6 +129,7 @@ void sock_event_cb(struct bufferevent *bev, short events, void *data)
 	ue_ctx->sock_ctx = NULL;
 }
 
+#if 0
 void sock_read_cb(struct bufferevent *bev, void *data)
 {
 	fprintf(stderr, "{dbg} %s called!\n", __func__);
@@ -132,7 +141,7 @@ void sock_read_cb(struct bufferevent *bev, void *data)
 	size_t recv_bytes = bufferevent_read(bev, mem_buff, sizeof(mem_buff));
 
 	if (recv_bytes <= 0) {  
-		if (errno != EAGAIN) {
+		if (errno == EINTR) {
 			fprintf(stderr, "%s() sock error! (%d:%s)\n", __func__, errno, strerror(errno));
 			release_sock_ctx(sock_ctx);
 			ue_ctx->sock_ctx = NULL;
@@ -158,6 +167,45 @@ void sock_read_cb(struct bufferevent *bev, void *data)
 
     return ngap_send_uplink_nas(ue_ctx, nas_str);
 }
+#else
+void sock_read_cb(struct bufferevent *bev, void *data)
+{
+	fprintf(stderr, "{DBG} %s called!\n", __func__);
+
+	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
+	sock_ctx_t *sock_ctx = ue_ctx->sock_ctx;
+
+	size_t read_maximum = SOCK_BUFF_MAX_SIZE - sock_ctx->remain_size;
+	size_t read_bytes = 0;
+
+SRC_RETRY:
+	read_bytes = bufferevent_read(bev, sock_ctx->sock_buffer + sock_ctx->remain_size, read_maximum);
+	sock_ctx->remain_size += read_bytes;
+
+	nas_envelop_t *nas = (nas_envelop_t *)sock_ctx->sock_buffer;
+	while (sock_ctx->remain_size >= sizeof(nas_envelop_t)) {
+		size_t nas_size = sizeof(uint16_t) + ntohs(nas->length);
+		if (nas_size <= sock_ctx->remain_size) {
+			char nas_str[10240] = {0,};
+			nas->length = ntohs(nas->length);
+			mem_to_hex((unsigned char *)nas->message, nas->length, nas_str);
+			ngap_send_uplink_nas(ue_ctx, nas_str);
+			memmove(sock_ctx->sock_buffer, &sock_ctx->sock_buffer[nas_size], sock_ctx->remain_size - nas_size);
+			sock_ctx->remain_size -= nas_size;
+		}
+	}
+
+	if (read_bytes == read_maximum) {
+		goto SRC_RETRY; /* maybe data remain */
+	}
+	if (errno == EINTR) {
+		fprintf(stderr, "%s() sock error! (%d:%s)\n", __func__, errno, strerror(errno));
+		release_sock_ctx(sock_ctx);
+		ue_ctx->sock_ctx = NULL;
+		return;
+	} 
+}
+#endif
 
 void sock_flush_cb(ue_ctx_t *ue_ctx)
 {
@@ -183,11 +231,22 @@ void sock_flush_cb(ue_ctx_t *ue_ctx)
 		iov[1].iov_base = nas->message;
 		iov[1].iov_len = nas_len;
 
-		int res = writev(sock_ctx->sock_fd, iov, 2);
-		if (res < 0) {
+		size_t expect_len = iov[0].iov_len + iov[1].iov_len;
+		if (writev(sock_ctx->sock_fd, iov, 2) != expect_len) {
 			fprintf(stderr, "{dbg} %s() writev failed (%d:%s)\n", __func__, errno, strerror(errno));
+			release_sock_ctx(sock_ctx);
+			ue_ctx->sock_ctx = NULL;
+			return;
 		}
 
+		free(ue_ctx->temp_cached_nas_message->data);
+		ue_ctx->temp_cached_nas_message = g_slist_remove(ue_ctx->temp_cached_nas_message, ue_ctx->temp_cached_nas_message->data);
+	}
+}
+
+void sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx)
+{
+	while (ue_ctx->temp_cached_nas_message && ue_ctx->temp_cached_nas_message->data) {
 		free(ue_ctx->temp_cached_nas_message->data);
 		ue_ctx->temp_cached_nas_message = g_slist_remove(ue_ctx->temp_cached_nas_message, ue_ctx->temp_cached_nas_message->data);
 	}

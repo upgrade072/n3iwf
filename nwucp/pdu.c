@@ -94,12 +94,25 @@ void pdu_proc_sess_establish_accept(pdu_ctx_t *pdu_ctx, void *arg)
 	pdu_ctx->pdu_nas_pdu = NULL;
 }
 
+void pdu_proc_json_id_attach(pdu_ctx_t *pdu_ctx, void *arg)
+{
+	json_object *js_pdu_session_val = (json_object *)arg;
+
+	json_object *js_pdu_id = json_object_new_object();
+	json_object_object_add(js_pdu_id, "pDUSessionID", json_object_new_int(pdu_ctx->pdu_sess_id));
+
+	json_object_array_add(js_pdu_session_val, js_pdu_id);
+}
+
 void pdu_proc_flush_ctx(ue_ctx_t *ue_ctx)
 {
 	while (ue_ctx->pdu_ctx_list && ue_ctx->pdu_ctx_list->data) {
+
 		pdu_ctx_t *pdu_ctx = (pdu_ctx_t *)ue_ctx->pdu_ctx_list->data;
-		free(pdu_ctx->pdu_nas_pdu);
-		pdu_ctx->pdu_nas_pdu = NULL;
+		if (pdu_ctx->pdu_nas_pdu != NULL) {
+			free(pdu_ctx->pdu_nas_pdu);
+			pdu_ctx->pdu_nas_pdu = NULL;
+		}
 
 		free(ue_ctx->pdu_ctx_list->data);
 		ue_ctx->pdu_ctx_list = g_slist_remove(ue_ctx->pdu_ctx_list, ue_ctx->pdu_ctx_list->data);

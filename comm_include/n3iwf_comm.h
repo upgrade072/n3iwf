@@ -28,6 +28,7 @@ typedef enum n3iwf_rescode_t {
 	N3_PDU_CREATE_REQUEST,		/* n3_pdu_sess_t */
 	N3_PDU_CREATE_SUCCESS, 		/* n3_pdu_sess_t */
 	N3_PDU_CREATE_FAILURE,		/* no payload */
+	N3_IPSEC_DELETE_PAYLOAD,	/* no payload */
 	/* .... */
 } n3iwf_rescode_t;
 

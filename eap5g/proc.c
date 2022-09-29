@@ -43,6 +43,12 @@ void proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 	msgsnd(MAIN_CTX->DISTR_INFO.worker_distr_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 }
 
+void proc_inform_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
+{
+	ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->DISTR_INFO.worker_num + 1;
+	msgsnd(MAIN_CTX->DISTR_INFO.worker_distr_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
+}
+
 void proc_eap_result(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 {
 	n3_eap_result_t *eap_result = (n3_eap_result_t *)n3iwf_msg->payload;
@@ -59,13 +65,51 @@ void proc_pdu_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 	n3_pdu_info_t *pdu_info = (n3_pdu_info_t *)n3iwf_msg->payload;
 	memcpy(pdu_info, &ike_msg->ike_data.pdu_info, N3_PDU_INFO_SIZE(pdu_info));
 
+	pdu_info->ue_ambr_dl = htonl(pdu_info->ue_ambr_dl);
+	pdu_info->ue_ambr_ul = htonl(pdu_info->ue_ambr_ul);
+
 	for (int i = 0; i < pdu_info->pdu_num; i++) {
 		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
+		fprintf(stderr, "{DBG} %s() send (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+				pdu_sess->session_id,
+				pdu_sess->pdu_sess_ambr_dl,
+				pdu_sess->pdu_sess_ambr_ul,
+				pdu_sess->gtp_te_addr,
+				pdu_sess->gtp_te_id,
+				pdu_sess->address_family);
 		pdu_sess->pdu_sess_ambr_dl = htonl(pdu_sess->pdu_sess_ambr_dl);
 		pdu_sess->pdu_sess_ambr_ul = htonl(pdu_sess->pdu_sess_ambr_ul);
 	}
 
 	n3iwf_msg->payload_len = N3_PDU_INFO_SIZE(pdu_info);
+}
+
+void proc_pdu_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
+{
+	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+
+	if (n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS) {
+		memcpy(pdu_info, n3iwf_msg->payload, n3iwf_msg->payload_len);
+
+		pdu_info->ue_ambr_dl = ntohl(pdu_info->ue_ambr_dl);
+		pdu_info->ue_ambr_ul = ntohl(pdu_info->ue_ambr_ul);
+
+		for (int i = 0; i < pdu_info->pdu_num; i++) {
+			n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
+			pdu_sess->pdu_sess_ambr_dl = ntohl(pdu_sess->pdu_sess_ambr_dl);
+			pdu_sess->pdu_sess_ambr_ul = ntohl(pdu_sess->pdu_sess_ambr_ul);
+			fprintf(stderr, "{DBG} %s() recv (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+					pdu_sess->session_id,
+					pdu_sess->pdu_sess_ambr_dl,
+					pdu_sess->pdu_sess_ambr_ul,
+					pdu_sess->gtp_te_addr,
+					pdu_sess->gtp_te_id,
+					pdu_sess->address_family);
+		}
+	}
+
+	ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->DISTR_INFO.worker_num + 1;
+	msgsnd(MAIN_CTX->DISTR_INFO.worker_distr_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 }
 
 void proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
@@ -80,6 +124,12 @@ void proc_udp_request(int msg_code, int res_code, n3iwf_msg_t *n3iwf_msg, ike_ms
 			break;
 		case N3_IKE_IPSEC_NOTI:
 			proc_ipsec_noti(n3iwf_msg, ike_msg);
+			break;
+		case N3_IKE_INFORM_RES:
+			proc_inform_response(n3iwf_msg, ike_msg);
+			break;
+		case N3_CREATE_CHILD_SA_RES:
+			proc_pdu_response(n3iwf_msg, ike_msg);
 			break;
 	}
 }

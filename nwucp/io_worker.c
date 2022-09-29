@@ -11,7 +11,6 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 
 	/* caution! must put this object */
 	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
-	fprintf(stderr, "{dbg} %s() recv ngap_pdu\n%s\n", __func__, JS_PRINT_PRETTY(js_ngap_pdu));
 
 	key_list_t *key_list = &ngap_msg->ngap_tag.key_list;
 	memset(key_list, 0x00, sizeof(key_list_t));
@@ -32,6 +31,9 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 			break;
 		case PDUSessionResourceSetup:
 			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
+			break;
+		case UEContextReleaseCommand:
+			ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
 			break;
 		default:
 			/* we can't handle, just discard */
@@ -63,6 +65,8 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 			return;
 		case N3_IKE_IPSEC_NOTI:
 			return nas_regi_to_amf(ike_msg);
+		case N3_IKE_INFORM_RES:
+			return ue_inform_res_handle(ike_msg);
 		case N3_CREATE_CHILD_SA_RES:
 			return ue_pdu_setup_res_handle(ike_msg);
 		default:

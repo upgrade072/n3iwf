@@ -9,7 +9,8 @@ if [  -f ${ROOTDIR}/build/lib/${LIBNAME}.a ]; then
     exit
 fi
 
-VERSION="2.1.8-stable"
+#VERSION="2.1.8-stable"
+VERSION="2.1.12-stable"
 if [ ! -f libevent-${VERSION}.tar.gz ]; then
 	wget https://github.com/libevent/libevent/releases/download/release-${VERSION}/libevent-${VERSION}.tar.gz
 fi

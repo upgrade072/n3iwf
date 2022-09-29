@@ -59,7 +59,6 @@ typedef struct qid_info_t {
 } qid_info_t;
 
 typedef struct nwucp_distr_t {
-	const char *ngap_distr_rule;
 	int worker_num;
 	int worker_distr_qid;
 } nwucp_distr_t;

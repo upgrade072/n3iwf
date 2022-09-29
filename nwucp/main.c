@@ -133,8 +133,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 		(create_n3iwf_profile(MAIN_CTX) < 0) ||
 		(create_amf_list(MAIN_CTX)		< 0) ||
 		(create_ue_list(MAIN_CTX)		< 0) || 
-		(create_qid_info(MAIN_CTX)		< 0) ||
-		(create_tcp_server(MAIN_CTX)	< 0)) {
+		(create_qid_info(MAIN_CTX)		< 0)) {
 		return (-1);
 	}
 
@@ -143,6 +142,10 @@ int initialize(main_ctx_t *MAIN_CTX)
     if (create_worker_thread(&MAIN_CTX->IO_WORKERS, "io_worker", MAIN_CTX) < 0) {
         return (-1);
     }
+
+	if (create_tcp_server(MAIN_CTX)	< 0) {
+		return (-1);
+	}
 
 	return (0);
 }
