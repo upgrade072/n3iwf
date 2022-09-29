@@ -10,11 +10,8 @@ void ngap_send_json(char *hostname, json_object *js_ngap)
 	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(js_ngap));
 
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s msgsnd res=(%d) size=(%ld) ",  __func__, res, ngap_msg->msg_size);
 	if (res < 0) {
-		fprintf(stderr, "(%d:%s)\n", errno, strerror(errno));
-	} else {
-		fprintf(stderr, "ngap_size=(%ld)\n", NGAP_MSG_SIZE(ngap_msg));
+		fprintf(stderr, "%s() error! (%d:%s)\n", __func__, errno, strerror(errno));
 	}
 }
 

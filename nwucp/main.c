@@ -39,7 +39,7 @@ int create_n3iwf_profile(main_ctx_t *MAIN_CTX)
     /* OK we get ngap_setup_request JSON PDU */
     MAIN_CTX->js_ng_setup_request = create_ng_setup_request_json(mcc_mnc, n3iwf_id, node_name, js_support_ta_item);
 
-    fprintf(stderr, "%s\n", JS_PRINT_PRETTY(MAIN_CTX->js_ng_setup_request));
+    fprintf(stderr, "%s() create message\n%s\n", __func__, JS_PRINT_PRETTY(MAIN_CTX->js_ng_setup_request));
 
 	json_object_put(json_cfg);
 
@@ -93,6 +93,7 @@ int create_tcp_server(main_ctx_t *MAIN_CTX)
 	tcp_server->listener = evconnlistener_new_bind(MAIN_CTX->evbase_main, listener_cb, NULL,
 			LEV_OPT_REUSEABLE|LEV_OPT_CLOSE_ON_FREE|LEV_OPT_THREADSAFE,
 			16, (struct sockaddr*)&tcp_server->listen_addr, sizeof(tcp_server->listen_addr));
+
 	if (tcp_server->listener == NULL) {
 		fprintf(stderr, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->tcp_listen_port);
 		return (-1);
@@ -121,7 +122,6 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
         }
 
         pthread_setname_np(worker_ctx->pthread_id, worker_ctx->thread_name);
-        fprintf(stderr, "setname=[%s]\n", worker_ctx->thread_name);
     }
 
     return 0;

@@ -43,7 +43,7 @@ void listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct soc
 	char client_ip[INET_ADDRSTRLEN] = {0,};
 	sprintf(client_ip, "%s", util_get_ip_from_sa(sa));
 
-	fprintf(stderr, "{dbg} %s called! (main) (from:%s)(fd:%d)\n", __func__, client_ip, fd);
+	fprintf(stderr, "%s() called! (main) (from:%s) (fd:%d)\n", __func__, client_ip, fd);
 
 	int ue_index = ipaddr_range_calc(MAIN_CTX->ue_info.ue_start_ip, client_ip);
 	if (ue_index < 0 || ue_index >= MAIN_CTX->ue_info.ue_num) {
@@ -65,7 +65,7 @@ LC_ERR:
 /* handle by worker */
 void accept_sock_cb(int conn_fd, short events, void *data)
 {
-	fprintf(stderr, "{dbg} %s called! (worker:%s)\n", __func__, WORKER_CTX->thread_name);
+	fprintf(stderr, "%s() called! (at worker:%s)\n", __func__, WORKER_CTX->thread_name);
 
 	sock_ctx_t *sock_ctx = (sock_ctx_t *)data; /* must be free */
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(sock_ctx->ue_index, WORKER_CTX);
@@ -76,14 +76,14 @@ void accept_sock_cb(int conn_fd, short events, void *data)
 		goto ASC_ERR;
 #else
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "%s() ue_ctx(index:%d) not created!\n", __func__, sock_ctx->ue_index);
+		fprintf(stderr, "%s() ue_ctx (ip:%s/index:%d) not created!\n", __func__, sock_ctx->client_ipaddr, sock_ctx->ue_index);
 		goto ASC_ERR;
 #endif
 	}
 
 	/* release older sock if exist */
 	if (ue_ctx->sock_ctx != NULL) {
-		fprintf(stderr, "{DBG} %s() check OLD CONN, release!\n", __func__);
+		fprintf(stderr, "%s() check ue [%s] have old sock_ctx, release!\n", __func__, UE_TAG(ue_ctx));
 		release_sock_ctx(ue_ctx->sock_ctx);
 		ue_ctx->sock_ctx = NULL;
 	}
@@ -129,49 +129,8 @@ void sock_event_cb(struct bufferevent *bev, short events, void *data)
 	ue_ctx->sock_ctx = NULL;
 }
 
-#if 0
 void sock_read_cb(struct bufferevent *bev, void *data)
 {
-	fprintf(stderr, "{dbg} %s called!\n", __func__);
-
-	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
-	sock_ctx_t *sock_ctx = ue_ctx->sock_ctx;
-
-	unsigned char mem_buff[10240] = {0,};
-	size_t recv_bytes = bufferevent_read(bev, mem_buff, sizeof(mem_buff));
-
-	if (recv_bytes <= 0) {  
-		if (errno == EINTR) {
-			fprintf(stderr, "%s() sock error! (%d:%s)\n", __func__, errno, strerror(errno));
-			release_sock_ctx(sock_ctx);
-			ue_ctx->sock_ctx = NULL;
-			return;
-		}
-		return;
-	}
-
-	if (recv_bytes <= sizeof(nas_envelop_t)) {
-		fprintf(stderr, "{dbg} %s() recv insufficient size (recv:%ld minimum:%ld)\n", __func__, recv_bytes, sizeof(nas_envelop_t));
-		return;
-	}
-
-	char nas_str[10240] = {0,};
-	nas_envelop_t *nas = (nas_envelop_t *)mem_buff;
-	nas->length = ntohs(nas->length);
-	if (nas->length >= sizeof(nas_str)) {
-		fprintf(stderr, "{dbg} %s() recv too huge size (nas->length:%d buffer:%ld)\n", __func__, nas->length, sizeof(nas_str));
-		return;
-	}
-
-	mem_to_hex((unsigned char *)nas->message, nas->length, nas_str);
-
-    return ngap_send_uplink_nas(ue_ctx, nas_str);
-}
-#else
-void sock_read_cb(struct bufferevent *bev, void *data)
-{
-	fprintf(stderr, "{DBG} %s called!\n", __func__);
-
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
 	sock_ctx_t *sock_ctx = ue_ctx->sock_ctx;
 
@@ -199,21 +158,18 @@ SRC_RETRY:
 		goto SRC_RETRY; /* maybe data remain */
 	}
 	if (errno == EINTR) {
-		fprintf(stderr, "%s() sock error! (%d:%s)\n", __func__, errno, strerror(errno));
+		fprintf(stderr, "%s() ue [%s] sock error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 		release_sock_ctx(sock_ctx);
 		ue_ctx->sock_ctx = NULL;
 		return;
 	} 
 }
-#endif
 
 void sock_flush_cb(ue_ctx_t *ue_ctx)
 {
-	fprintf(stderr, "{dbg} %s() called!\n", __func__);
-
 	sock_ctx_t *sock_ctx = ue_ctx->sock_ctx;
 	if (sock_ctx == NULL) {
-		fprintf(stderr, "{dbg} %s() fail cause sock_ctx=[null]\n", __func__);
+		fprintf(stderr, "TODO %s() fail cause sock_ctx=[null]!\n", __func__);
 		return;
 	}
 
@@ -233,7 +189,7 @@ void sock_flush_cb(ue_ctx_t *ue_ctx)
 
 		size_t expect_len = iov[0].iov_len + iov[1].iov_len;
 		if (writev(sock_ctx->sock_fd, iov, 2) != expect_len) {
-			fprintf(stderr, "{dbg} %s() writev failed (%d:%s)\n", __func__, errno, strerror(errno));
+			fprintf(stderr, "%s() ue [%s] writev failed (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 			release_sock_ctx(sock_ctx);
 			ue_ctx->sock_ctx = NULL;
 			return;

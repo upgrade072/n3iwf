@@ -99,8 +99,8 @@ ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 
 void ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state)
 {
-	fprintf(stderr, "%s() ue_ctx (cp_id:%d up_id:%d) state change [%s]=>[%s]\n", 
-			__func__, ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, ue_ctx->state, new_state);
+	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s]=>[%s]\n", 
+			ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, ue_ctx->state, new_state);
 
 	ue_ctx->state = new_state;
 }
@@ -277,7 +277,7 @@ void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 		if (ue_check_an_param_with_amf(eap_5g, js_guami, js_plmn_id) > 0) {
 			find_amf = 1;
 			sprintf(ike_msg->ike_tag.cp_amf_host, "%s", amf_ctx->hostname);
-			fprintf(stderr, "{dbg} %s() find an_param match at amf=[%s] cp_id=(%d)\n", __func__, amf_ctx->hostname, ike_msg->n3iwf_msg.ctx_info.cp_id);
+			fprintf(stderr, "%s() find an_param match at amf=[%s] cp_id=(%d)\n", __func__, amf_ctx->hostname, ike_msg->n3iwf_msg.ctx_info.cp_id);
 			break;
 		}
 	}
@@ -300,7 +300,7 @@ int ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
     uint32_t ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
 
     if (amf_ue_ngap_id < 0 || ran_ue_ngap_id < 0) {
-        fprintf(stderr, "{todo} %s() fail cause ngap_id not exist!\n", __func__);
+        fprintf(stderr, "%s() ue [%s] fail cause ngap_id not exist!\n", __func__, UE_TAG(ue_ctx));
 		return -1;
 	} else {
         ue_ctx->amf_tag.amf_ue_id = amf_ue_ngap_id;

@@ -46,31 +46,29 @@ void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 	eap_relay_t *eap_recv = &ike_msg->eap_5g;
 
 	if (eap_recv->eap_code != EAP_RESPONSE && eap_recv->msg_id != NAS_5GS_NAS) {
-		fprintf(stderr, "{todo} %s() recv invalid eap_id or msg_id!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid eap_id or msg_id!\n", __func__, UE_TAG(ue_ctx));
 		goto NPIUM_ERR;
 	}
 
 	if (strlen(ike_msg->ike_tag.cp_amf_host) == 0) {
-		fprintf(stderr, "{todo} %s() recv invalid amf_select!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid amf_select!\n", __func__, UE_TAG(ue_ctx));
 		goto NPIUM_ERR;
 	} else {
 		sprintf(ue_ctx->amf_tag.amf_host, "%s", ike_msg->ike_tag.cp_amf_host);
-		fprintf(stderr, "{dbg} %s() save amf_host=[%s] to ue_ctx\n", __func__, ue_ctx->amf_tag.amf_host);
 	}
 
 	if (strlen(eap_recv->nas_str) == 0) {
-		fprintf(stderr, "{todo} %s() recv invalid nas_pdu!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid nas_pdu!\n", __func__, UE_TAG(ue_ctx));
 		goto NPIUM_ERR;
-	} else {
-		fprintf(stderr, "{dbg} %s() recv nas_pdu=[%s]\n", __func__, ike_msg->eap_5g.nas_str);
 	}
 
 	if (eap_recv->an_param.cause.set == 0) {
-		fprintf(stderr, "{todo} %s() recv invalid cause!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid cause!\n", __func__, UE_TAG(ue_ctx));
 		goto NPIUM_ERR;
-	} else {
-		fprintf(stderr, "{dbg} %s() recv cause=[%s]\n", __func__, eap_recv->an_param.cause.cause_str);
 	}
+
+	fprintf(stderr, "%s() ue [%s] save amf host [%s], recv nas_pdu [%s], recv cause [%s]\n", 
+			__func__, UE_TAG(ue_ctx), ue_ctx->amf_tag.amf_host, ike_msg->eap_5g.nas_str, eap_recv->an_param.cause.cause_str);
 
 	json_object *js_initial_ue_message = create_initial_ue_message_json(ue_ctx->index, eap_recv->nas_str, ue_ctx->ike_tag.ue_from_addr, ue_ctx->ike_tag.ue_from_port, eap_recv->an_param.cause.cause_str);
 
@@ -99,16 +97,16 @@ void ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 	eap_relay_t *eap_recv = &ike_msg->eap_5g;
 
 	if (eap_recv->eap_code != EAP_RESPONSE && eap_recv->msg_id != NAS_5GS_NAS) {
-		fprintf(stderr, "{todo} %s() recv invalid eap_id or msg_id!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid eap_id or msg_id!\n", __func__, UE_TAG(ue_ctx));
 		goto NPUNT_ERR;
 	}
 
 	if (strlen(eap_recv->nas_str) == 0) {
-		fprintf(stderr, "{todo} %s() recv invalid nas_pdu!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] recv invalid nas_pdu!\n", __func__, UE_TAG(ue_ctx));
 		goto NPUNT_ERR;
-	} else {
-		fprintf(stderr, "{dbg} %s() recv nas_pdu=[%s]\n", __func__, ike_msg->eap_5g.nas_str);
 	}
+
+	fprintf(stderr, "%s() ue [%s] recv nas_pdu [%s]\n", __func__, UE_TAG(ue_ctx), eap_recv->nas_str);
 
 	return ngap_send_uplink_nas(ue_ctx, ike_msg->eap_5g.nas_str);
 
@@ -130,12 +128,6 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 
 	/* start timer */
 	ue_ctx_stop_timer(ue_ctx);
-#if 0
-	// TODO : if ipsec fail release ue_ctx
-	struct timeval tmout_sec = { N3_EXPIRE_TM_SEC, 0 };
-	ue_ctx->ev_timer = event_new(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx);
-	event_add(ue_ctx->ev_timer, &tmout_sec);
-#endif
 
 	ue_ctx_transit_state(ue_ctx, "NGAP_INIT_CTX_SETUP_RSP");
 
@@ -188,7 +180,7 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() called null ue_ctx! reply to UP fail response\n", __func__);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
 		return;
 	}
 	ue_ctx_stop_timer(ue_ctx);
@@ -198,7 +190,8 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 	eap_relay_t *eap_recv = &ike_msg->eap_5g;
 
 	if (eap_send->eap_id != eap_recv->eap_id) {
-		fprintf(stderr, "{todo} %s() check eap_id mismatch send=(%d) recv=(%d)\n", __func__, eap_send->eap_id, eap_recv->eap_id);
+		fprintf(stderr, "TODO %s() ue [%s] check eap_id mismatch send=(%d)/recv=(%d)!\n", 
+				__func__, UE_TAG(ue_ctx), eap_send->eap_id, eap_recv->eap_id);
 		return ue_ctx_unset(ue_ctx);
 	}
 
@@ -215,7 +208,7 @@ void nas_regi_to_amf(ike_msg_t *ike_msg)
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() called null ue_ctx! reply to UP fail response\n", __func__);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
 		return;
 	}
 	ue_ctx_stop_timer(ue_ctx);
@@ -227,10 +220,8 @@ void nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
 		goto NRTU_ERR;
-	} else {
-		fprintf(stderr, "{dbg} %s() success to get ue (index:%d)\n", __func__, ue_ctx->index);
 	}
 
 	/* stop timer */
@@ -238,13 +229,13 @@ void nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
     /* check ngap message, have mandatory */
 	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
-		fprintf(stderr, "%s() fail cause ngap_id not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ngap_id!\n", __func__, UE_TAG(ue_ctx));
 		goto NRTU_ERR;
 	}
 
 	const char *nas_pdu = ngap_get_nas_pdu(js_ngap_pdu);
 	if (nas_pdu == NULL) {
-		fprintf(stderr, "{todo} %s() fail to get mandatory nas_pdu!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s] fail, to get mandatory nas_pdu!\n", __func__, UE_TAG(ue_ctx));
 		goto NRTU_ERR;
 	}
 
@@ -266,7 +257,7 @@ void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto URRH_ERR;
     }
     
@@ -275,13 +266,13 @@ void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
     
     /* check ngap message, have mandatory */
 	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
-		fprintf(stderr, "%s() fail cause ngap_id not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ngap_id!\n", __func__, UE_TAG(ue_ctx));
 		goto URRH_ERR;
 	}
 
 	const char *security_key = ngap_get_security_key(js_ngap_pdu);
     if (security_key == NULL) {
-		fprintf(stderr, "%s() fail cause security_key not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory security_key!\n", __func__, UE_TAG(ue_ctx));
         goto URRH_ERR;
     }
 	if (ue_ctx->security_key != NULL) {
@@ -294,7 +285,7 @@ void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	// TODO if nas pdu exist
 
 	if (ue_ctx->js_ue_regi_data != NULL) {
-		fprintf(stderr, "{dbg} %s() check UE have old regi data, will replaced with new!\n", __func__);
+		fprintf(stderr, "%s() ue [%s] check UE have old regi data, will replaced with new!\n", __func__, UE_TAG(ue_ctx));
 		json_object_put(ue_ctx->js_ue_regi_data);
 		ue_ctx->js_ue_regi_data = NULL;
 	}
@@ -316,7 +307,7 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto UPSH_ERR;
     }
     
@@ -325,7 +316,7 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
     /* check ngap message, have mandatory */
 	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
-		fprintf(stderr, "%s() fail cause ngap_id not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ngap_id!\n", __func__, UE_TAG(ue_ctx));
 		goto UPSH_ERR;
 	}
 
@@ -334,7 +325,7 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	pdu_info->ue_ambr_dl = ngap_get_ue_ambr_dl(js_ngap_pdu);
 	pdu_info->ue_ambr_ul = ngap_get_ue_ambr_ul(js_ngap_pdu);
 	if (pdu_info->ue_ambr_dl < 0 || pdu_info->ue_ambr_ul < 0) {
-		fprintf(stderr, "%s() fail cause ue_ambr not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ue_ambr_dl/ul!\n", __func__, UE_TAG(ue_ctx));
 		goto UPSH_ERR;
 	}
 
@@ -343,7 +334,7 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:74, value}/", &key_pdu_session_resource_setup_list_su_req);
 
 	if (js_pdu_session_resource_setup_list_su_req == NULL) {
-        fprintf(stderr, "{todo} %s() fail cause pdu_session_resource_setup_list_su_req not exist!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory pdu_session_resource_setup_list_su_req!\n", __func__, UE_TAG(ue_ctx));
         goto UPSH_ERR;
 	}
 
@@ -355,8 +346,6 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	return;
 
 UPSH_ERR:
-	fprintf(stderr, "{todo} %s() must to something!\n", __func__);
-
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
@@ -368,7 +357,7 @@ void ue_pdu_setup_res_handle(ike_msg_t *ike_msg)
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() called null ue_ctx! reply to UP fail response\n", __func__);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
 		return;
 	}
 	ue_ctx_stop_timer(ue_ctx);
@@ -387,7 +376,7 @@ void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-        fprintf(stderr, "{todo} %s() fail to get ue (index:%d)\n", __func__, ngap_msg->ngap_tag.id);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto UCRH_ERR;
     }
     
@@ -401,7 +390,7 @@ void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	if (amf_ue_ngap_id != ue_ctx->amf_tag.amf_ue_id ||
 		ran_ue_ngap_id != ue_ctx->amf_tag.ran_ue_id ||
 		rel_cause == NULL) {
-		fprintf(stderr, "{dbg} %s check mandatory fail!\n", __func__);
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ngap_id or rel_cause!\n", __func__, UE_TAG(ue_ctx));
 		goto UCRH_ERR;
 	}
 
@@ -419,7 +408,7 @@ void ue_inform_res_handle(ike_msg_t *ike_msg)
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{todo} %s() called null ue_ctx! reply to UP fail response\n", __func__);
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
 		return;
 	}
 	ue_ctx_stop_timer(ue_ctx);

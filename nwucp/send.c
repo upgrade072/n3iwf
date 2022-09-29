@@ -43,7 +43,9 @@ void eap_send_eap_request(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu)
 
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+	if (res < 0) {
+		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+	}
 }
 
 void eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key)
@@ -82,7 +84,9 @@ void eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key
 
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+	if (res < 0) {
+		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+	}
 }
 
 void ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
@@ -107,7 +111,9 @@ void ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+	if (res < 0) {
+		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+	}
 }
 
 void ike_send_inform_request(ue_ctx_t *ue_ctx, int res_code)
@@ -130,7 +136,9 @@ void ike_send_inform_request(ue_ctx_t *ue_ctx, int res_code)
 
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
-	fprintf(stderr, "{dbg} %s send res=(%d)\n", __func__, res);
+	if (res < 0) {
+		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+	}
 }
 
 void ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
@@ -163,7 +171,7 @@ void tcp_send_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)
 	if (ue_ctx->sock_ctx != NULL) {
 		sock_flush_cb(ue_ctx);
 	} else {
-		fprintf(stderr, "{DBG} sock ctx not created!\n");
+		fprintf(stderr, "%s() ue [%s] save temp_cache_nas_message\n", __func__, UE_TAG(ue_ctx));
 	}
 }
 

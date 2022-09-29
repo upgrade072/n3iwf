@@ -27,6 +27,7 @@
 #include <eap_intf.h>
 
 #define MAX_WORKER_NUM      12
+#define UE_TAG(a)			(a->ctx_info.ue_id)
 
 // for tcp nas relay
 typedef struct nas_envelop_t {
