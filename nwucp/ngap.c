@@ -172,6 +172,33 @@ json_object *create_pdu_session_resource_setup_response_json(const char *result,
 
 	return js_pdu_session_resource_setup_response_message;
 }
+
+#define UEContextReleaseRequest_JSON "{\"initiatingMessage\":{\"procedureCode\":42,\"criticality\":\"ignore\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"reject\",\"value\":%u},{\"id\":85,\"criticality\":\"reject\",\"value\":%u},{\"id\":133,\"criticality\":\"reject\",\"value\":[]},{\"id\":15,\"criticality\":\"ignore\",\"value\":{\"radioNetwork\":\"user-inactivity\"}}]}}}"
+json_object *create_ue_context_release_request_json(uint32_t amf_ue_id, uint32_t ran_ue_id, ue_ctx_t *ue_ctx)
+{
+	/* make UEContextReleaseRequest */
+	char *ptr = NULL;
+	asprintf(&ptr, UEContextReleaseRequest_JSON, amf_ue_id, ran_ue_id);
+    json_object *js_ue_context_release_request_message = json_tokener_parse(ptr);
+    free(ptr);
+
+	/* id:133 PDUSessionResourceListCxtRelReq */
+	if (g_slist_length(ue_ctx->pdu_ctx_list) > 0) {
+		/* indicate remain pdu ids */
+		key_list_t key_pdu_session_val = {0,};
+		json_object *js_pdu_session_val = 
+			search_json_object_ex(js_ue_context_release_request_message, 
+					"/*/value/protocolIEs/{id:133, value}", &key_pdu_session_val);
+		g_slist_foreach(ue_ctx->pdu_ctx_list, (GFunc)pdu_proc_json_id_attach, js_pdu_session_val);
+	} else {
+		/* remove field */
+		json_object *js_protocol_ies = JS_SEARCH_OBJ(js_ue_context_release_request_message, "/initiatingMessage/value/protocolIEs");
+		json_object_array_del_idx(js_protocol_ies, 2, 1);
+	}
+
+	return js_ue_context_release_request_message;
+}
+
 #define UEContextReleaseComplete_JSON "{\"successfulOutcome\":{\"procedureCode\":41,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":%u},{\"id\":85,\"criticality\":\"ignore\",\"value\":%u},{\"id\":121,\"criticality\":\"reject\",\"value\":{\"userLocationInformationN3IWF\":{\"iPAddress\":{\"value\":\"%s\",\"length\":32},\"portNumber\":\"%04X\"}}},{\"id\":60,\"criticality\":\"reject\",\"value\":[]}]}}}"
 json_object *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_t ran_ue_id, char *ip_str, int port, ue_ctx_t *ue_ctx)
 {
@@ -179,7 +206,7 @@ json_object *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_
 	char ip_hex[128] = {0,};
 	ipaddr_to_hex(ip_str, ip_hex);
 
-	/* make UplinkNASTransport */
+	/* make UEContextReleaseComplete */
 	char *ptr = NULL;
 	asprintf(&ptr, UEContextReleaseComplete_JSON, amf_ue_id, ran_ue_id, ip_hex, port);
     json_object *js_ue_context_release_complete_message = json_tokener_parse(ptr);

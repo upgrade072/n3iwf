@@ -191,6 +191,18 @@ void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *
 	json_object_put(js_pdu_session_resouce_setup_response);
 }
 
+void ngap_proc_ue_context_release_request(ue_ctx_t *ue_ctx)
+{
+	json_object *js_ue_context_release_request = 
+		create_ue_context_release_request_json(ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, ue_ctx);
+
+	/* send to amf */
+	ngap_send_json(ue_ctx->amf_tag.amf_host, js_ue_context_release_request);
+
+	/* release resource */
+	json_object_put(js_ue_context_release_request);
+}
+
 void ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx)
 {
 	json_object *js_ue_context_release_complete = 
@@ -284,6 +296,20 @@ NRTU_ERR:
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
+}
+
+void ue_context_release(ike_msg_t *ike_msg)
+{
+	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
+
+	if (ue_ctx == NULL) {
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
+		return;
+	}
+	ue_ctx_stop_timer(ue_ctx);
+
+	return ngap_proc_ue_context_release_request(ue_ctx);
 }
 
 void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)

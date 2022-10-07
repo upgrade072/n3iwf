@@ -116,6 +116,8 @@ const char *n3_res_code_str(int res_code)
 			return "pdu_update_failure";
 		case N3_IPSEC_DELETE_UE_CTX:
 			return "ipsec_delete_ue_ctx";
+		case N3_IPSEC_UE_DISCONNECT:
+			return "ipsec_ue_disconnect";
         default:
             return "unknown";
     }

@@ -186,16 +186,6 @@ int     ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, j
 void    ue_set_amf_by_an_param(ike_msg_t *ike_msg);
 int     ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu);
 
-/* ------------------------- ngap.c --------------------------- */
-void    ngap_send_json(char *hostname, json_object *js_ngap);
-json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
-json_object     *create_initial_ue_message_json(uint32_t ue_id, char *nas_pdu, char *ip_str, int port, char *cause);
-json_object     *create_uplink_nas_transport_json(uint32_t amf_ue_id, uint32_t ran_ue_id, const char *nas_pdu, char *ip_str, int port);
-json_object     *create_initial_context_setup_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id);
-json_object     *create_pdu_session_resource_release_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info);
-json_object     *create_pdu_session_resource_setup_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info);
-json_object     *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_t ran_ue_id, char *ip_str, int port, ue_ctx_t *ue_ctx);
-
 /* ------------------------- tcp.c --------------------------- */
 sock_ctx_t      *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index);
 void    release_sock_ctx(sock_ctx_t *sock_ctx);
@@ -206,6 +196,26 @@ void    sock_event_cb(struct bufferevent *bev, short events, void *data);
 void    sock_read_cb(struct bufferevent *bev, void *data);
 void    sock_flush_cb(ue_ctx_t *ue_ctx);
 void    sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx);
+
+/* ------------------------- io_worker.c --------------------------- */
+void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
+void    handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller);
+void    msg_rcv_from_ngapp(int conn_fd, short events, void *data);
+void    msg_rcv_from_eap5g(int conn_fd, short events, void *data);
+worker_ctx_t    *worker_ctx_get_by_index(int index);
+void    io_thrd_tick(int conn_fd, short events, void *data);
+void    *io_worker_thread(void *arg);
+
+/* ------------------------- ngap.c --------------------------- */
+void    ngap_send_json(char *hostname, json_object *js_ngap);
+json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
+json_object     *create_initial_ue_message_json(uint32_t ue_id, char *nas_pdu, char *ip_str, int port, char *cause);
+json_object     *create_uplink_nas_transport_json(uint32_t amf_ue_id, uint32_t ran_ue_id, const char *nas_pdu, char *ip_str, int port);
+json_object     *create_initial_context_setup_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id);
+json_object     *create_pdu_session_resource_release_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info);
+json_object     *create_pdu_session_resource_setup_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info);
+json_object     *create_ue_context_release_request_json(uint32_t amf_ue_id, uint32_t ran_ue_id, ue_ctx_t *ue_ctx);
+json_object     *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_t ran_ue_id, char *ip_str, int port, ue_ctx_t *ue_ctx);
 
 /* ------------------------- handler.c --------------------------- */
 void    eap_proc_5g_start(int conn_fd, short events, void *data);
@@ -220,25 +230,18 @@ void    ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
 void    ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
 void    ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
 void    ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_ue_context_release_request(ue_ctx_t *ue_ctx);
 void    ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx);
 void    nas_relay_to_amf(ike_msg_t *ike_msg);
 void    nas_regi_to_amf(ike_msg_t *ike_msg);
 void    nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+void    ue_context_release(ike_msg_t *ike_msg);
 void    ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 void    ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 void    ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 void    ue_pdu_setup_res_handle(ike_msg_t *ike_msg);
 void    ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 void    ue_inform_res_handle(ike_msg_t *ike_msg);
-
-/* ------------------------- io_worker.c --------------------------- */
-void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
-void    handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller);
-void    msg_rcv_from_ngapp(int conn_fd, short events, void *data);
-void    msg_rcv_from_eap5g(int conn_fd, short events, void *data);
-worker_ctx_t    *worker_ctx_get_by_index(int index);
-void    io_thrd_tick(int conn_fd, short events, void *data);
-void    *io_worker_thread(void *arg);
 
 /* ------------------------- main.c --------------------------- */
 int     load_config(config_t *CFG);

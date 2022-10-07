@@ -76,14 +76,17 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 			}
 			if (eap_5g->an_param.set == 1) {
 				/* main (select amf) --msgsnd--> worker */
-				ue_set_amf_by_an_param(ike_msg);
+				return ue_set_amf_by_an_param(ike_msg);
 			} else {
-				nas_relay_to_amf(ike_msg);
+				return nas_relay_to_amf(ike_msg);
 			}
-			return;
 		case N3_IKE_IPSEC_NOTI:
 			fprintf(stderr, "%s() recv [N3_IKE_IPSEC_NOTI]\n", __func__);
-			return nas_regi_to_amf(ike_msg);
+			if (n3iwf_msg->res_code == N3_IPSEC_UE_DISCONNECT) {
+				return ue_context_release(ike_msg);
+			} else {
+				return nas_regi_to_amf(ike_msg);
+			}
 		case N3_IKE_INFORM_RES:
 			fprintf(stderr, "%s() recv [N3_IKE_INFORM_RES]\n", __func__);
 			return ue_inform_res_handle(ike_msg);
@@ -93,6 +96,7 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 		default:
 			/* we can't handle, just discard */
 			fprintf(stderr, "%s() recv [Unknown IKE Message=(%d)!]\n", __func__, n3iwf_msg->msg_code);
+			return;
 	}
 }
 

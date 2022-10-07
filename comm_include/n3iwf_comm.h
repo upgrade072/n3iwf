@@ -35,6 +35,7 @@ typedef enum n3iwf_rescode_t {
 	N3_PDU_UPDATE_SUCCESS, 		// n3_pdu_sess_t
 	N3_PDU_UPDATE_FAILURE,		// n3_pdu_sess_t
 	N3_IPSEC_DELETE_UE_CTX,		// [no payload]
+	N3_IPSEC_UE_DISCONNECT, 	// [no payload]
 	/* .... */
 } n3iwf_rescode_t;
 
