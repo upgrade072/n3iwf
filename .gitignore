@@ -9,3 +9,4 @@ add.sh
 *.d
 *.a
 *.swp
+*.bin
