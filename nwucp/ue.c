@@ -35,7 +35,7 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 		ip_list = ipaddr_increaser(ip_list);
 	}
 
-	fprintf(stderr, "{dbg} %s() create ue from_%s ~ to_%s, num=(%d) netmask=(%d)\n", 
+	fprintf(stderr, "%s() create ue from_%s ~ to_%s, num=(%d) netmask=(%d)\n", 
 			__func__, ip_start, ip_end, MAIN_CTX->ue_info.ue_num, MAIN_CTX->ue_info.netmask);
 
 	return (0);
@@ -49,7 +49,7 @@ ue_ctx_t *ue_ctx_assign(main_ctx_t *MAIN_CTX)
 		if (ue_ctx->occupied == 0) {
 			ue_ctx->occupied = 1;
 			MAIN_CTX->ue_info.cur_index = index;
-			fprintf(stderr, "{dbg} %s() assign ue ctx (index:%d, ip:%s)\n", __func__, index, ue_ctx->ip_addr);
+			fprintf(stderr, "%s() assign ue ctx (index:%d, ip:%s)\n", __func__, index, ue_ctx->ip_addr);
 			return ue_ctx;
 		}
 	}
@@ -78,19 +78,19 @@ void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 {
 	if (index >= MAIN_CTX->ue_info.ue_num) {
-		fprintf(stderr, "{dbg} %s() called with invalid ue_index (%d), ue_num=(%d)!\n", 
+		fprintf(stderr, "%s() called with invalid ue_index (%d), ue_num=(%d)!\n", 
 				__func__, index, MAIN_CTX->ue_info.ue_num);
 		return NULL;
 	}
 	if ((index % MAIN_CTX->IO_WORKERS.worker_num) != worker_ctx->thread_index) {
-		fprintf(stderr, "{dbg} %s() called with invalid worker (%d), ue_index (%d) valid worker=(%d)!\n", 
+		fprintf(stderr, "%s() called with invalid worker (%d), ue_index (%d) valid worker=(%d)!\n", 
 				__func__, worker_ctx->thread_index, index, index % MAIN_CTX->IO_WORKERS.worker_num);
 		return NULL;
 	}
 
 	ue_ctx_t *ue_ctx = &MAIN_CTX->ue_info.ue_ctx[index];
 	if (ue_ctx->occupied == 0) {
-		fprintf(stderr, "{dbg} %s() called with invalid ue_index (%d), it's unoccupied!\n", __func__, index);
+		fprintf(stderr, "%s() called with invalid ue_index (%d), it's unoccupied!\n", __func__, index);
 		return NULL;
 	}
 
@@ -99,8 +99,13 @@ ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 
 void ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state)
 {
-	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s]=>[%s]\n", 
+#if 0
+	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s] => [%s]\n", 
 			ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, ue_ctx->state, new_state);
+#else
+	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s]\n", 
+			ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, new_state);
+#endif
 
 	ue_ctx->state = new_state;
 }
@@ -150,7 +155,7 @@ void ue_ctx_unset(ue_ctx_t *ue_ctx)
 {
 	ue_ctx_stop_timer(ue_ctx);
 
-	fprintf(stderr, "{dbg} %s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
+	fprintf(stderr, "%s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
 
 	ue_ctx->state = NULL;
 	ue_ctx->occupied = 0;
@@ -178,7 +183,7 @@ int ue_compare_guami(an_param_t *an_param, json_object *js_guami)
 				json_object_get_string(search_json_object(js_elem, "/gUAMI/aMFPointer")));
 
 		if (!strcmp(guami_str, compare_str)) {
-			fprintf(stderr, "{dbg} %s() find guami=[%s] in (%d)th elem of amf profile!\n", __func__, guami_str, i);
+			fprintf(stderr, "%s() find guami=[%s] in (%d)th elem of amf profile!\n", __func__, guami_str, i);
 			return 1;
 		}
 	}
@@ -201,7 +206,7 @@ int ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list)
 				json_object_get_string(search_json_object(js_elem, "/s-NSSAI/sD")));
 
 		if (!strcmp(sstsd_str, compare_str)) {
-			fprintf(stderr, "{dbg} %s() find sstsd=[%s] in (%d)th elem of amf profile (sliceSupportList)!\n", __func__, sstsd_str, i);
+			fprintf(stderr, "%s() find sstsd=[%s] in (%d)th elem of amf profile (sliceSupportList)!\n", __func__, sstsd_str, i);
 			return 1;
 		}
 	}
@@ -286,7 +291,7 @@ void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 	}
 
 	/* unset amf selection tag, adjust mtype by cp_id, relay to io_worker */
-	eap_5g->an_param.set = 0;
+	eap_5g->an_param.set = RS_AN_PARAM_PROCESS;
 
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->IO_WORKERS.worker_num + 1;

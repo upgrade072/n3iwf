@@ -7,43 +7,43 @@ void eap_proc_5g_start(int conn_fd, short events, void *data)
 {
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
 
-	ue_ctx_transit_state(ue_ctx, "EAP_REQ_5G_START");
+	ue_ctx_transit_state(ue_ctx, "EAP-Req/5G-Start");
 	eap_send_eap_request(ue_ctx, NAS_5GS_START, NULL); 
 }
 
 void eap_proc_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)
 {
-	ue_ctx_transit_state(ue_ctx, "EAP_REQ_5G_NAS");
+	ue_ctx_transit_state(ue_ctx, "EAP-Req/5G-NAS");
 	eap_send_eap_request(ue_ctx, NAS_5GS_NAS, nas_pdu); 
 }
 
 void eap_proc_final(ue_ctx_t *ue_ctx, bool success, const char *security_key)
 {
-	ue_ctx_transit_state(ue_ctx, success == true ? "UE_REGI_SUCCESS" : "UE_REGI_FAIL");
+	ue_ctx_transit_state(ue_ctx, success == true ? "EAP-Success" : "EAP-Failure");
 	eap_send_final_eap(ue_ctx, success, security_key);
 }
 
 void tcp_proc_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)
 {
-	ue_ctx_transit_state(ue_ctx, "TCP_DOWNLINK_NAS");
+	ue_ctx_transit_state(ue_ctx, "N2 Downlink NAS transport");
 	tcp_send_downlink_nas(ue_ctx, nas_pdu); 
 }
 
 void ike_proc_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 {
-	ue_ctx_transit_state(ue_ctx, "PDU_SESSION_RELEASE");
+	ue_ctx_transit_state(ue_ctx, "N2 PDU Session Release");
 	ike_send_pdu_release(ue_ctx, pdu_info);
 }
 
 void ike_proc_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 {
-	ue_ctx_transit_state(ue_ctx, "PDU_SESSION_REQUEST");
+	ue_ctx_transit_state(ue_ctx, "N3 PDU Session Request");
 	ike_send_pdu_request(ue_ctx, pdu_info);
 }
 
 void ike_proc_ue_release(ue_ctx_t *ue_ctx)
 {
-	ue_ctx_transit_state(ue_ctx, "UE_RELEASE");
+	ue_ctx_transit_state(ue_ctx, "N2 UE Context Release");
 	ike_send_ue_release(ue_ctx);
 }
 
@@ -73,7 +73,7 @@ void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 		goto NPIUM_ERR;
 	}
 
-	fprintf(stderr, "%s() ue [%s] save amf host [%s], recv nas_pdu [%s], recv cause [%s]\n", 
+	fprintf(stderr, "%s() ue [%s] save amf host [%s],\n\t recv nas_pdu [%s], recv cause [%s]\n", 
 			__func__, UE_TAG(ue_ctx), ue_ctx->amf_tag.amf_host, ike_msg->eap_5g.nas_str, eap_recv->an_param.cause.cause_str);
 
 	json_object *js_initial_ue_message = create_initial_ue_message_json(ue_ctx->index, eap_recv->nas_str, ue_ctx->ike_tag.ue_from_addr, ue_ctx->ike_tag.ue_from_port, eap_recv->an_param.cause.cause_str);
@@ -84,7 +84,7 @@ void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 	ue_ctx->ev_timer = event_new(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx);
 	event_add(ue_ctx->ev_timer, &tmout_sec);
 
-	ue_ctx_transit_state(ue_ctx, "NGAP_REQ_REGI");
+	ue_ctx_transit_state(ue_ctx, "N2 msg (Registration Request)");
 
 	/* send to amf */
 	ngap_send_json(ue_ctx->amf_tag.amf_host, js_initial_ue_message);
@@ -112,7 +112,7 @@ void ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 		goto NPUNT_ERR;
 	}
 
-	fprintf(stderr, "%s() ue [%s] recv nas_pdu [%s]\n", __func__, UE_TAG(ue_ctx), eap_recv->nas_str);
+	fprintf(stderr, "%s() ue [%s],\n\t recv nas_pdu [%s]\n", __func__, UE_TAG(ue_ctx), eap_recv->nas_str);
 
 	return ngap_send_uplink_nas(ue_ctx, ike_msg->eap_5g.nas_str);
 
@@ -135,7 +135,7 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 	/* start timer */
 	ue_ctx_stop_timer(ue_ctx);
 
-	ue_ctx_transit_state(ue_ctx, "NGAP_INIT_CTX_SETUP_RSP");
+	ue_ctx_transit_state(ue_ctx, "Initial Context Setup Res");
 
 	/* send to amf */
 	ngap_send_json(ue_ctx->amf_tag.amf_host, js_initial_context_setup_response_message);
@@ -155,7 +155,7 @@ void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t
 				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, pdu_info);
 
 	ue_ctx_transit_state(ue_ctx, n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? 
-			"PDU_SESSION_DEL_SUCCESS" : "PDU_SESSION_DEL_FAIL");
+			"PDU Session Release Success" : "PDU Session Release Failure");
 
 	/* send to amf */
 	ngap_send_json(ue_ctx->amf_tag.amf_host, js_pdu_session_resouce_release_response);
@@ -182,7 +182,7 @@ void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *
 				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, pdu_info);
 
 	ue_ctx_transit_state(ue_ctx, n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS ? 
-			"PDU_SESSION_CRT_SUCCESS" : "PDU_SESSION_CRT_FAIL");
+			"PDU Session Create Success" : "PDU Session Create Failure");
 
 	/* send to amf */
 	ngap_send_json(ue_ctx->amf_tag.amf_host, js_pdu_session_resouce_setup_response);
@@ -223,6 +223,7 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
+	eap_relay_t *eap_5g = &ike_msg->eap_5g;
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
@@ -240,7 +241,7 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 		return ue_ctx_unset(ue_ctx);
 	}
 
-	if (!strcmp(ue_ctx->state, "EAP_REQ_5G_START")) {
+	if (eap_5g->an_param.set == RS_AN_PARAM_PROCESS) {
 		return ngap_proc_initial_ue_message(ue_ctx, ike_msg);
 	} else {
 		return ngap_proc_uplink_nas_transport(ue_ctx, ike_msg);

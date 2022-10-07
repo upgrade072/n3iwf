@@ -182,7 +182,7 @@ void ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
 		event_add(ue_ctx->ev_timer, &tmout_sec);
 	}
 
-	ue_ctx_transit_state(ue_ctx, "NGAP_UPLINK_NAS");
+	ue_ctx_transit_state(ue_ctx, "N2 Uplink NAS transport");
 
 	/* send to amf */
 	ngap_send_json(ue_ctx->amf_tag.amf_host, js_uplink_nas_transport_message);

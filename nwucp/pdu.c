@@ -49,7 +49,7 @@ int pdu_proc_fill_pdu_sess_release_list(ue_ctx_t *ue_ctx, json_object *js_pdu_se
 			fprintf(stderr, "TODO %s() check mandatory fail!\n", __func__);
 			continue;
 		} else {
-			fprintf(stderr, "{dbg} %s() ue [%s] delete pdu (id:%d) cause(%s)\n", __func__, UE_TAG(ue_ctx), pdu_sess_id, pdu_sess_rel_cause);
+			fprintf(stderr, "%s() ue [%s] delete pdu (id:%d) cause(%s)\n", __func__, UE_TAG(ue_ctx), pdu_sess_id, pdu_sess_rel_cause);
 		}
 
 		n3_pdu_sess_t *pdu_sess = &pdu_sess_list[num_of_pdu++];

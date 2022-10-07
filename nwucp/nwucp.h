@@ -42,6 +42,12 @@ typedef enum event_caller_t {
 	EC_WORKER
 } event_caller_t;
 
+typedef enum regi_step_t {
+	RS_AN_PARAM_NONE	= 0,
+	RS_AN_PARAM_SET,
+	RS_AN_PARAM_PROCESS,
+} regi_step_t;
+
 typedef enum ngap_msg_enum_t {
 	DownlinkNASTransport				= 4,
 	InitialContextSetupRequest			= 14,
