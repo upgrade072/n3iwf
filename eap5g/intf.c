@@ -102,8 +102,20 @@ const char *n3_res_code_str(int res_code)
 			return "pdu_create_success";
 		case N3_PDU_CREATE_FAILURE:
 			return "pdu_create_failure";
-		case N3_IPSEC_DELETE_PAYLOAD:
-			return "ipsec_delete_payload";
+		case N3_PDU_DELETE_REQUEST:
+			return "pdu_delete_request";
+		case N3_PDU_DELETE_SUCCESS:
+			return "pdu_delete_success";
+		case N3_PDU_DELETE_FAILURE:
+			return "pdu_delete_failure";
+		case N3_PDU_UPDATE_REQUEST:
+			return "pdu_update_request";
+		case N3_PDU_UPDATE_SUCCESS:
+			return "pdu_update_success";
+		case N3_PDU_UPDATE_FAILURE:
+			return "pdu_update_failure";
+		case N3_IPSEC_DELETE_UE_CTX:
+			return "ipsec_delete_ue_ctx";
         default:
             return "unknown";
     }

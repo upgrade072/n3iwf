@@ -29,16 +29,22 @@ void tcp_proc_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)
 	tcp_send_downlink_nas(ue_ctx, nas_pdu); 
 }
 
+void ike_proc_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
+{
+	ue_ctx_transit_state(ue_ctx, "PDU_SESSION_RELEASE");
+	ike_send_pdu_release(ue_ctx, pdu_info);
+}
+
 void ike_proc_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 {
 	ue_ctx_transit_state(ue_ctx, "PDU_SESSION_REQUEST");
 	ike_send_pdu_request(ue_ctx, pdu_info);
 }
 
-void ike_proc_inform_request(ue_ctx_t *ue_ctx, int res_code)
+void ike_proc_ue_release(ue_ctx_t *ue_ctx)
 {
-	ue_ctx_transit_state(ue_ctx, "INFORM_REQUEST");
-	ike_send_inform_request(ue_ctx, res_code);
+	ue_ctx_transit_state(ue_ctx, "UE_RELEASE");
+	ike_send_ue_release(ue_ctx);
 }
 
 void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
@@ -136,6 +142,33 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 
 	/* release resource */
 	json_object_put(js_initial_context_setup_response_message);
+}
+
+void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
+{
+	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+
+	json_object *js_pdu_session_resouce_release_response = 
+		create_pdu_session_resource_release_response_json(
+				n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? "successfulOutcome" : "UnSuccessfulOutcome", 
+				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, pdu_info);
+
+	ue_ctx_transit_state(ue_ctx, n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? 
+			"PDU_SESSION_DEL_SUCCESS" : "PDU_SESSION_DEL_FAIL");
+
+	/* send to amf */
+	ngap_send_json(ue_ctx->amf_tag.amf_host, js_pdu_session_resouce_release_response);
+
+	/* release resource */
+	json_object_put(js_pdu_session_resouce_release_response);
+
+	/* send nas message (pdu session release) command */
+	tcp_proc_downlink_nas(ue_ctx, NULL);
+
+	/* remove pdu ctx */
+	pdu_proc_remove_ctx(ue_ctx, pdu_info);
+
 }
 
 void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
@@ -303,6 +336,55 @@ URRH_ERR:
 	}
 }
 
+void ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+{
+    ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
+    if (ue_ctx == NULL) {
+		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
+        goto UPRR_ERR;
+    }
+    
+    /* stop timer */
+    ue_ctx_stop_timer(ue_ctx);
+
+    /* check ngap message, have mandatory */
+	if (ue_check_ngap_id(ue_ctx, js_ngap_pdu) < 0) {
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ngap_id!\n", __func__, UE_TAG(ue_ctx));
+		goto UPRR_ERR;
+	}
+
+	const char *nas_pdu = ngap_get_nas_pdu(js_ngap_pdu);
+	if (nas_pdu == NULL) {
+		fprintf(stderr, "TODO %s() ue [%s] fail, to get mandatory nas_pdu!\n", __func__, UE_TAG(ue_ctx));
+		goto UPRR_ERR;
+	}
+
+	n3_pdu_info_t pdu_buffer = {0,}, *pdu_info = &pdu_buffer;
+
+	key_list_t key_pdu_session_resource_to_release_list_rel_cmd = {0,};
+	json_object *js_pdu_session_resource_to_release_list_rel_cmd = 
+		search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:79, value}/", &key_pdu_session_resource_to_release_list_rel_cmd);
+
+	if (js_pdu_session_resource_to_release_list_rel_cmd == NULL) {
+		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory pdu_session_resource_to_release_list_rel_cmd!\n", __func__, UE_TAG(ue_ctx));
+        goto UPRR_ERR;
+	}
+
+	tcp_save_downlink_nas(ue_ctx, nas_pdu);
+
+	pdu_info->pdu_num = 
+		pdu_proc_fill_pdu_sess_release_list(ue_ctx, js_pdu_session_resource_to_release_list_rel_cmd, pdu_info->pdu_sessions);
+
+	ike_proc_pdu_release(ue_ctx, pdu_info);
+
+	return;
+
+UPRR_ERR:
+	if (ue_ctx != NULL) {
+		ue_ctx_unset(ue_ctx);
+	}
+}
+
 void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
@@ -321,13 +403,6 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	}
 
 	n3_pdu_info_t pdu_buffer = {0,}, *pdu_info = &pdu_buffer;
-
-	pdu_info->ue_ambr_dl = ngap_get_ue_ambr_dl(js_ngap_pdu);
-	pdu_info->ue_ambr_ul = ngap_get_ue_ambr_ul(js_ngap_pdu);
-	if (pdu_info->ue_ambr_dl < 0 || pdu_info->ue_ambr_ul < 0) {
-		fprintf(stderr, "TODO %s() ue [%s]  fail, to get mandatory ue_ambr_dl/ul!\n", __func__, UE_TAG(ue_ctx));
-		goto UPSH_ERR;
-	}
 
 	key_list_t key_pdu_session_resource_setup_list_su_req = {0,};
 	json_object *js_pdu_session_resource_setup_list_su_req = 
@@ -394,7 +469,7 @@ void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 		goto UCRH_ERR;
 	}
 
-	ike_proc_inform_request(ue_ctx, N3_IPSEC_DELETE_PAYLOAD);
+	ike_proc_ue_release(ue_ctx);
 
 	return;
 
@@ -414,7 +489,10 @@ void ue_inform_res_handle(ike_msg_t *ike_msg)
 	ue_ctx_stop_timer(ue_ctx);
 
 	switch (n3iwf_msg->res_code) {
-		case N3_IPSEC_DELETE_PAYLOAD:
+		case N3_PDU_DELETE_SUCCESS:
+		case N3_PDU_DELETE_FAILURE:
+			return ngap_proc_pdu_session_resource_release_response(ue_ctx, ike_msg);
+		case N3_IPSEC_DELETE_UE_CTX:
 			return ngap_proc_ue_context_release_complete(ue_ctx);
 	}
 }

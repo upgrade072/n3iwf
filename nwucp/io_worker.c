@@ -32,8 +32,12 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 			fprintf(stderr, "%s() recv [InitialContextSetupRequest]\n", __func__);
 			ue_regi_res_handle(ngap_msg, js_ngap_pdu);
 			break;
-		case PDUSessionResourceSetup:
-			fprintf(stderr, "%s() recv [PDUSessionResourceSetup]\n", __func__);
+		case PDUSessionResourceReleaseRequest:
+			fprintf(stderr, "%s() recv [PDUSessionResourceReleaseRequest]\n", __func__);
+			ue_pdu_release_req_handle(ngap_msg, js_ngap_pdu);
+			break;
+		case PDUSessionResourceSetupRequest:
+			fprintf(stderr, "%s() recv [PDUSessionResourceSetupRequest]\n", __func__);
 			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case UEContextReleaseCommand:
@@ -42,7 +46,7 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 			break;
 		default:
 			/* we can't handle, just discard */
-			fprintf(stderr, "%s() recv [Unknown NGAP Message=(%d)!]\n", __func__, proc_code);
+			fprintf(stderr, "%s() recv [Unknown NGAP Message=(%d)!]\n%s\n", __func__, proc_code, JS_PRINT_PRETTY(js_ngap_pdu));
 			break;
 	}
 

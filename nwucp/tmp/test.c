@@ -8,8 +8,13 @@ void print_item(char *ptr, void *arg)
     fprintf(stderr, "[%s] ", ptr);
 }
 
-void remove_item(char *ptr, void *arg)
+gint compare_item(gpointer data, gpointer arg)
 {
+	const char *item_data = (const char *)data;
+	const char *find = (char *)arg;
+	fprintf(stderr, "%s() called, [%s] [%s]\n", __func__, item_data, find);
+
+	return (strcmp(item_data, find));
 }
 
 int main()
@@ -24,6 +29,16 @@ int main()
     list = g_slist_append(list, strdup("hij"));
 
     fprintf(stderr, "phase1) list length=(%d)\n", g_slist_length(list));
+
+    g_slist_foreach(list, (GFunc)print_item, NULL);
+    fprintf(stderr, "\n");
+
+	GSList *item = g_slist_find_custom(list, "abc", (GCompareFunc)compare_item);
+	if (item != NULL) {
+		fprintf(stderr, "find item! will remove\n");
+		free(item->data);
+		list = g_slist_remove(list, item->data);
+	}
 
     g_slist_foreach(list, (GFunc)print_item, NULL);
     fprintf(stderr, "\n");

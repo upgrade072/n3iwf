@@ -33,6 +33,32 @@ int pdu_proc_fill_qos_flow_ids(n3_pdu_sess_t *pdu_sess, json_object *js_pdu_qos_
 	return num_of_qos_flow_ids;
 }
 
+int pdu_proc_fill_pdu_sess_release_list(ue_ctx_t *ue_ctx, json_object *js_pdu_sess_list, n3_pdu_sess_t *pdu_sess_list /* x MAX_N3_PDU_NUM */)
+{
+	int num_of_pdu = 0;
+
+	for (int i = 0; i < json_object_array_length(js_pdu_sess_list) && num_of_pdu < MAX_N3_PDU_NUM; i++) {
+		/* get item */
+		json_object *js_elem = json_object_array_get_idx(js_pdu_sess_list, i);
+
+		/* check mandatory */
+		int pdu_sess_id						= ngap_get_pdu_sess_id(js_elem);
+		const char *pdu_sess_rel_cause		= ngap_get_pdu_sess_rel_cause(js_elem);
+
+		if (pdu_sess_id	< 0 || pdu_sess_rel_cause	== NULL) {
+			fprintf(stderr, "TODO %s() check mandatory fail!\n", __func__);
+			continue;
+		} else {
+			fprintf(stderr, "{dbg} %s() ue [%s] delete pdu (id:%d) cause(%s)\n", __func__, UE_TAG(ue_ctx), pdu_sess_id, pdu_sess_rel_cause);
+		}
+
+		n3_pdu_sess_t *pdu_sess = &pdu_sess_list[num_of_pdu++];
+		pdu_sess->session_id = pdu_sess_id;
+	}
+
+	return num_of_pdu;
+}
+
 int pdu_proc_fill_pdu_sess_setup_list(ue_ctx_t *ue_ctx, json_object *js_pdu_sess_list, n3_pdu_sess_t *pdu_sess_list /* x MAX_N3_PDU_NUM */)
 {
 	int num_of_pdu = 0;
@@ -102,6 +128,33 @@ void pdu_proc_json_id_attach(pdu_ctx_t *pdu_ctx, void *arg)
 	json_object_object_add(js_pdu_id, "pDUSessionID", json_object_new_int(pdu_ctx->pdu_sess_id));
 
 	json_object_array_add(js_pdu_session_val, js_pdu_id);
+}
+
+gint pdu_proc_find_ctx(gpointer data, gpointer arg)
+{
+	pdu_ctx_t *pdu_ctx = (pdu_ctx_t *)data;
+	uint8_t *find_id = (uint8_t *)arg;
+
+	return pdu_ctx->pdu_sess_id - *find_id;
+}
+
+void pdu_proc_remove_ctx(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
+{
+	for (int i = 0; i < pdu_info->pdu_num && i < MAX_N3_PDU_NUM; i++) {
+		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
+
+		GSList *item = g_slist_find_custom(ue_ctx->pdu_ctx_list, &pdu_sess->session_id, (GCompareFunc)pdu_proc_find_ctx);
+		if (item != NULL) {
+			pdu_ctx_t *pdu_ctx = (pdu_ctx_t *)item->data;
+
+			if (pdu_ctx->pdu_nas_pdu != NULL) {
+				free(pdu_ctx->pdu_nas_pdu);
+				pdu_ctx->pdu_nas_pdu = NULL;
+			}
+			free(item->data);
+			ue_ctx->pdu_ctx_list = g_slist_remove(ue_ctx->pdu_ctx_list, item->data);
+		}
+	}
 }
 
 void pdu_proc_flush_ctx(ue_ctx_t *ue_ctx)

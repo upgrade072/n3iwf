@@ -10,7 +10,7 @@
 #include <libutil.h>
 #include <json_macro.h>
 
-#define JS_TEST "{\"successfulOutcome\":{\"procedureCode\":41,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":17179977417},{\"id\":85,\"criticality\":\"ignore\",\"value\":10021},{\"id\":121,\"criticality\":\"reject\",\"value\":{\"userLocationInformationN3IWF\":{\"iPAddress\":{\"value\":\"C0A87F02\",\"length\":32},\"portNumber\":\"01F4\"}}},{\"id\":60,\"criticality\":\"reject\",\"value\":[]}]}}}"
+#define JS_TEST "{\"successfulOutcome\":{\"procedureCode\":28,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":17179977417},{\"id\":85,\"criticality\":\"ignore\",\"value\":10021},{\"id\":70,\"criticality\":\"ignore\",\"value\":[]}]}}}"
 int main()
 {
 	json_object *js_test = json_tokener_parse(JS_TEST);

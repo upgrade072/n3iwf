@@ -37,22 +37,6 @@ const char *ngap_get_security_key(json_object *js_ngap_pdu)
 	return js_security_key == NULL ? NULL : json_object_get_string(js_security_key);
 }
 
-int64_t ngap_get_ue_ambr_dl(json_object *js_ngap_pdu)
-{
-	key_list_t key_ue_ambr_dl = {0,};
-	json_object *js_ue_ambr_dl = search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:110, value}/uEAggregateMaximumBitRateDL", &key_ue_ambr_dl);
-
-	return js_ue_ambr_dl == NULL ? -1 : json_object_get_int64(js_ue_ambr_dl);
-}
-
-int64_t ngap_get_ue_ambr_ul(json_object *js_ngap_pdu)
-{
-	key_list_t key_ue_ambr_ul = {0,};
-	json_object *js_ue_ambr_ul = search_json_object_ex(js_ngap_pdu, "/initiatingMessage/value/protocolIEs/{id:110, value}/uEAggregateMaximumBitRateUL", &key_ue_ambr_ul);
-
-	return js_ue_ambr_ul == NULL ? -1 : json_object_get_int64(js_ue_ambr_ul);
-}
-
 int ngap_get_pdu_sess_id(json_object *js_pdu_sess_elem)
 {
 	json_object *js_pdu_sess_id = search_json_object(js_pdu_sess_elem, "/pDUSessionID");
@@ -65,6 +49,15 @@ const char *ngap_get_pdu_sess_nas_pdu(json_object *js_pdu_sess_elem)
 	json_object *js_pdu_nas_pdu =  search_json_object(js_pdu_sess_elem, "/pDUSessionNAS-PDU");
 
 	return js_pdu_nas_pdu == NULL ? NULL : json_object_get_string(js_pdu_nas_pdu);
+}
+
+const char *ngap_get_pdu_sess_rel_cause(json_object *js_pdu_sess_elem)
+{
+	key_list_t key_pdu_sess_rel_cause = {0,};
+	json_object *js_pdu_sess_rel_cause = 
+		search_json_object_ex(js_pdu_sess_elem, "/pDUSessionResourceReleaseCommandTransfer/containing/cause/*/", &key_pdu_sess_rel_cause);
+
+	return js_pdu_sess_rel_cause == NULL ? NULL : json_object_get_string(js_pdu_sess_rel_cause);
 }
 
 int64_t ngap_get_pdu_sess_ambr_dl(json_object *js_pdu_sess_elem)

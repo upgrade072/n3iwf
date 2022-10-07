@@ -85,8 +85,43 @@ json_object *create_initial_context_setup_response_json(const char *result, uint
 	return js_initial_context_setup_response_message;
 }
 
+#define PDUSessionResourceReleaseResponse_JSON "{\"%s\":{\"procedureCode\":28,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":%u},{\"id\":85,\"criticality\":\"ignore\",\"value\":%u},{\"id\":70,\"criticality\":\"ignore\",\"value\":[]}]}}}"
+#define PDUSessionReleaseItem_JSON "{\"pDUSessionID\":%d,\"pDUSessionResourceReleaseResponseTransfer\":{\"containing\":{}}}"
+json_object *create_pdu_session_resource_release_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info)
+{
+	/* make PDUSessionResourceSetupResponse */
+	char *msg_ptr = NULL;
+	asprintf(&msg_ptr, PDUSessionResourceReleaseResponse_JSON, result, amf_ue_id, ran_ue_id);
+	json_object *js_pdu_session_resource_release_response_message = json_tokener_parse(msg_ptr);
+	free(msg_ptr);
+
+	/* if fail result, no more body need */
+	if (!strcmp(result, "UnSuccessfulOutcome")) {
+		return js_pdu_session_resource_release_response_message;
+	}
+
+	key_list_t key_pdu_session_val = {0,};
+	json_object *js_pdu_session_val = 
+		search_json_object_ex(js_pdu_session_resource_release_response_message, 
+			"/*/value/protocolIEs/{id:70, value}", &key_pdu_session_val);
+
+	for (int i = 0; i < pdu_info->pdu_num && i < MAX_N3_PDU_NUM; i++) {
+		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
+
+		/* make pdu session item */
+		char *item_ptr = NULL;
+		asprintf(&item_ptr, PDUSessionReleaseItem_JSON, pdu_sess->session_id);
+		json_object *js_pdu_item = json_tokener_parse(item_ptr);
+		free(item_ptr);
+
+		json_object_array_add(js_pdu_session_val, js_pdu_item);
+	}
+
+	return js_pdu_session_resource_release_response_message;
+}
+
 #define PDUSessionResourceSetupResponse_JSON "{\"%s\":{\"procedureCode\":29,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":%u},{\"id\":85,\"criticality\":\"ignore\",\"value\":%u},{\"id\":75,\"criticality\":\"ignore\",\"value\":[]}]}}}"
-#define PDUSessionItem_JSON "{\"pDUSessionID\":%d,\"pDUSessionResourceSetupResponseTransfer\":{\"containing\":{\"dLQosFlowPerTNLInformation\":{\"uPTransportLayerInformation\":{\"gTPTunnel\":{\"transportLayerAddress\":{\"value\":\"%s\",\"length\":32},\"gTP-TEID\":\"%.8s\"}},\"associatedQosFlowList\":[]}}}}"
+#define PDUSessionSetupItem_JSON "{\"pDUSessionID\":%d,\"pDUSessionResourceSetupResponseTransfer\":{\"containing\":{\"dLQosFlowPerTNLInformation\":{\"uPTransportLayerInformation\":{\"gTPTunnel\":{\"transportLayerAddress\":{\"value\":\"%s\",\"length\":32},\"gTP-TEID\":\"%.8s\"}},\"associatedQosFlowList\":[]}}}}"
 json_object *create_pdu_session_resource_setup_response_json(const char *result, uint32_t amf_ue_id, uint32_t ran_ue_id, n3_pdu_info_t *pdu_info)
 {
 	/* make PDUSessionResourceSetupResponse */
@@ -118,7 +153,7 @@ json_object *create_pdu_session_resource_setup_response_json(const char *result,
 
 		/* make pdu session item */
 		char *item_ptr = NULL;
-		asprintf(&item_ptr, PDUSessionItem_JSON, pdu_sess->session_id, ip_addr, pdu_sess->gtp_te_id);
+		asprintf(&item_ptr, PDUSessionSetupItem_JSON, pdu_sess->session_id, ip_addr, pdu_sess->gtp_te_id);
 		json_object *js_pdu_item = json_tokener_parse(item_ptr);
 		free(item_ptr);
 
@@ -150,12 +185,19 @@ json_object *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_
     json_object *js_ue_context_release_complete_message = json_tokener_parse(ptr);
     free(ptr);
 
-	key_list_t key_pdu_session_val = {0,};
-	json_object *js_pdu_session_val = 
-		search_json_object_ex(js_ue_context_release_complete_message, 
-			"/*/value/protocolIEs/{id:60, value}", &key_pdu_session_val);
-
-	g_slist_foreach(ue_ctx->pdu_ctx_list, (GFunc)pdu_proc_json_id_attach, js_pdu_session_val);
+	/* id:60 PDUSessionResourceListCxtRelCpl */
+	if (g_slist_length(ue_ctx->pdu_ctx_list) > 0) {
+		/* indicate remain pdu ids */
+		key_list_t key_pdu_session_val = {0,};
+		json_object *js_pdu_session_val = 
+			search_json_object_ex(js_ue_context_release_complete_message, 
+					"/*/value/protocolIEs/{id:60, value}", &key_pdu_session_val);
+		g_slist_foreach(ue_ctx->pdu_ctx_list, (GFunc)pdu_proc_json_id_attach, js_pdu_session_val);
+	} else {
+		/* remove field */
+		json_object *js_protocol_ies = JS_SEARCH_OBJ(js_ue_context_release_complete_message, "/successfulOutcome/value/protocolIEs");
+		json_object_array_del_idx(js_protocol_ies, 3, 1);
+	}
 
 	return js_ue_context_release_complete_message;
 }

@@ -152,7 +152,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 void main_tick(int conn_fd, short events, void *data)
 {
-	//fprintf(stderr, "%s called!\n", __func__);
+	//fprintf(stderr, "%s()\n", __func__);
 }
 
 int main()
