@@ -165,6 +165,10 @@ int main()
 
 	if (initialize(MAIN_CTX) < 0) {
 		exit(0);
+	} else {
+		char cmd[10240] = {0,};
+		sprintf(cmd, "touch %s/sctpc_start", getenv("HOME"));
+		system(cmd);
 	}
 
     struct timeval one_sec = {1, 0};

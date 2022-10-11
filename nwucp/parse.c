@@ -146,3 +146,12 @@ const char *ngap_get_ctx_rel_cause(json_object *js_ngap_pdu)
 
 	return js_rel_cause == NULL ? NULL : json_object_get_string(js_rel_cause);
 }
+
+json_object *ngap_get_unavailable_guami_list(json_object *js_ngap_pdu)
+{
+	key_list_t key_unavailable_guami_list = {0,};
+	json_object *js_key_unavailable_guami_list = search_json_object_ex(js_ngap_pdu, 
+			"/initiatingMessage/value/protocolIEs/{id:120, value}", &key_unavailable_guami_list);
+
+	return js_key_unavailable_guami_list;
+}

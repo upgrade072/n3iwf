@@ -147,6 +147,9 @@ int initialize(main_ctx_t *MAIN_CTX)
 		return (-1);
 	}
 
+	/* check ~/data, if sctpc restart to some action */
+	start_watching_dir(MAIN_CTX);
+
 	return (0);
 }
 

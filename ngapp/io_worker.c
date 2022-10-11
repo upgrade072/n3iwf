@@ -23,7 +23,14 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	}
 
 	/* print pdu */
+#if 0
 	ossPrintPDU(world, PDU_NUM, ngap_pdu);
+#else
+	OssBuf outputData = { .length = 0, .value = NULL };
+	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
+	fprintf(stderr, "Send %s", outputData.value);
+	ossFreeBuf(world, outputData.value);
+#endif
 
 	/* encode pdu - (to APER) */
 	ossSetEncodingRules(world, OSS_PER_ALIGNED);
@@ -81,7 +88,14 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	}
 
 	/* print pdu */
+#if 0
 	ossPrintPDU(world, PDU_NUM, ngap_pdu);
+#else
+	OssBuf outputData = { .length = 0, .value = NULL };
+	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
+	fprintf(stderr, "Recv %s", outputData.value);
+	ossFreeBuf(world, outputData.value);
+#endif
 
 	/* encode pdu - (to JER) */
 	ossSetEncodingRules(world, OSS_JSON);

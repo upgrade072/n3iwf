@@ -47,12 +47,7 @@ void disp_conn_list(main_ctx_t *MAIN_CTX)
 				conn->name,
 				conn->enable,
 				conn->conn_num,
-				conn->src_addr[0],
-				conn->src_addr[1],
-				conn->src_addr[2],
-				conn->dst_addr[0],
-				conn->dst_addr[1],
-				conn->dst_addr[2],
+				conn->src_addr[0], conn->src_addr[1], conn->src_addr[2], conn->dst_addr[0], conn->dst_addr[1], conn->dst_addr[2],
 				conn->sport,
 				conn->dport,
 				ft_to_string(assoc_table));

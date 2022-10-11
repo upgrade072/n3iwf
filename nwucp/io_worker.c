@@ -3,11 +3,12 @@
 extern main_ctx_t *MAIN_CTX;
 __thread worker_ctx_t *WORKER_CTX;
 
-void handle_ngap_log(const char *prefix, sctp_tag_t *sctp_tag)
+void handle_ngap_log(const char *prefix, sctp_tag_t *sctp_tag, event_caller_t caller)
 {
-	fprintf(stderr, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d]\n",
+	fprintf(stderr, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
 			prefix,
-			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid);
+			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid, 
+			caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
 }
 
 void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
@@ -25,33 +26,38 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 
 	switch (proc_code) 
 	{
+		case AMFStatusIndication:
+			handle_ngap_log("AMFStatusIndication", sctp_tag, caller);
+			amf_status_ind_handle(sctp_tag, js_ngap_pdu);
+			break;
 		case NGSetupResponse:
-			handle_ngap_log("NGSetupResponse", sctp_tag);
+			handle_ngap_log("NGSetupResponse", sctp_tag, caller);
 			amf_regi_res_handle(sctp_tag, success, js_ngap_pdu);
 			break;
 		case DownlinkNASTransport:
-			handle_ngap_log("DownlinkNASTransport", sctp_tag);
+			handle_ngap_log("DownlinkNASTransport", sctp_tag, caller);
 			nas_relay_to_ue(ngap_msg, js_ngap_pdu);
 			break;
 		case InitialContextSetupRequest:
-			handle_ngap_log("InitialContextSetupRequest", sctp_tag);
+			handle_ngap_log("InitialContextSetupRequest", sctp_tag, caller);
 			ue_regi_res_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case PDUSessionResourceReleaseRequest:
-			handle_ngap_log("PDUSessionResourceReleaseRequest", sctp_tag);
+			handle_ngap_log("PDUSessionResourceReleaseRequest", sctp_tag, caller);
 			ue_pdu_release_req_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case PDUSessionResourceSetupRequest:
-			handle_ngap_log("PDUSessionResourceSetupRequest", sctp_tag);
+			handle_ngap_log("PDUSessionResourceSetupRequest", sctp_tag, caller);
 			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case UEContextReleaseCommand:
-			handle_ngap_log("UEContextReleaseCommand", sctp_tag);
+			handle_ngap_log("UEContextReleaseCommand", sctp_tag, caller);
 			ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
 			break;
 		default:
 			/* we can't handle, just discard */
-			fprintf(stderr, "%s() recv [Unknown NGAP Message=(%d)!]\n%s\n", __func__, proc_code, JS_PRINT_PRETTY(js_ngap_pdu));
+			fprintf(stderr, "%s() recv [Unknown NGAP Message=(%d)!] with (%s)\n%s\n", 
+					__func__, proc_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name, JS_PRINT_PRETTY(js_ngap_pdu));
 			break;
 	}
 
@@ -60,15 +66,16 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 	}
 }
 
-void handle_ike_log(const char *prefix, ike_msg_t *ike_msg)
+void handle_ike_log(const char *prefix, ike_msg_t *ike_msg, event_caller_t caller)
 {
-	fprintf(stderr, "\nike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s]\n",
+	fprintf(stderr, "\nike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s] with (%s)\n",
 			prefix,
 			ike_msg->ike_tag.ue_from_addr,
 			ike_msg->ike_tag.ue_from_port,
 			ike_msg->ike_tag.up_from_addr,
 			ike_msg->ike_tag.up_from_port,
-			ike_msg->ike_tag.cp_amf_host);
+			ike_msg->ike_tag.cp_amf_host,
+			caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
 }
 
 void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
@@ -79,7 +86,7 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 	switch (n3iwf_msg->msg_code)
 	{
 		case N3_IKE_AUTH_REQ:
-			handle_ike_log("N3_IKE_AUTH_REQ", ike_msg);
+			handle_ike_log("N3_IKE_AUTH_REQ", ike_msg, caller);
 			if (n3iwf_msg->res_code == N3_EAP_INIT) {
 				return ue_assign_by_ike_auth(ike_msg);
 			}
@@ -90,21 +97,22 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 				return nas_relay_to_amf(ike_msg);
 			}
 		case N3_IKE_IPSEC_NOTI:
-			handle_ike_log("N3_IKE_IPSEC_NOTI", ike_msg);
+			handle_ike_log("N3_IKE_IPSEC_NOTI", ike_msg, caller);
 			if (n3iwf_msg->res_code == N3_IPSEC_UE_DISCONNECT) {
 				return ue_context_release(ike_msg);
 			} else {
 				return nas_regi_to_amf(ike_msg);
 			}
 		case N3_IKE_INFORM_RES:
-			handle_ike_log("N3_IKE_INFORM_RES", ike_msg);
+			handle_ike_log("N3_IKE_INFORM_RES", ike_msg, caller);
 			return ue_inform_res_handle(ike_msg);
 		case N3_CREATE_CHILD_SA_RES:
-			handle_ike_log("N3_CREATE_CHILD_SA_RES", ike_msg);
+			handle_ike_log("N3_CREATE_CHILD_SA_RES", ike_msg, caller);
 			return ue_pdu_setup_res_handle(ike_msg);
 		default:
 			/* we can't handle, just discard */
-			fprintf(stderr, "%s() recv [Unknown IKE Message=(%d)!]\n", __func__, n3iwf_msg->msg_code);
+			fprintf(stderr, "%s() recv [Unknown IKE Message=(%d)!] with (%s)\n", 
+					__func__, n3iwf_msg->msg_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
 			return;
 	}
 }

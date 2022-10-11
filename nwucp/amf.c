@@ -21,6 +21,11 @@ int create_amf_list(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
+void remove_amf_list(main_ctx_t *MAIN_CTX)
+{
+	link_node_delete_all(&MAIN_CTX->amf_list, amf_ctx_unset);
+}
+
 void amf_regi(int conn_fd, short events, void *data)
 {
 	amf_ctx_t *amf_ctx = (amf_ctx_t *)data;
@@ -80,3 +85,24 @@ void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_nga
 
 	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
 }
+
+void amf_status_ind_handle(sctp_tag_t *sctp_tag, json_object *js_ngap_pdu)
+{
+	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
+
+	if (amf_ctx == NULL) {
+		fprintf(stderr, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
+		return;
+	}
+
+	json_object *js_unavailable_guami_list = ngap_get_unavailable_guami_list(js_ngap_pdu);
+
+	if (js_unavailable_guami_list != NULL) {
+		fprintf(stderr, "%s() check! unavailable guami list (IEs:120)\n%s\n", __func__, JS_PRINT_PRETTY(js_unavailable_guami_list));
+
+		/* re-start ng_setup */
+		amf_ctx_unset(amf_ctx);
+		amf_regi_start(MAIN_CTX, amf_ctx);
+	}
+}
+
