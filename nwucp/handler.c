@@ -146,8 +146,9 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 
 void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 {
-	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
-	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+	n3iwf_msg_t *n3iwf_msg	= &ike_msg->n3iwf_msg;
+	n3_pdu_info_t *pdu_info	= &ike_msg->ike_data.pdu_info;
+	ike_msg->ike_choice		= choice_pdu_info;
 
 	json_object *js_pdu_session_resouce_release_response = 
 		create_pdu_session_resource_release_response_json(
@@ -173,8 +174,9 @@ void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t
 
 void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 {
-	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
+	n3iwf_msg_t *n3iwf_msg	= &ike_msg->n3iwf_msg;
 	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+	ike_msg->ike_choice		= choice_pdu_info;
 
 	json_object *js_pdu_session_resouce_setup_response = 
 		create_pdu_session_resource_setup_response_json(

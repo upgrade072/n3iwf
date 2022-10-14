@@ -1,18 +1,18 @@
 #include <eap5g.h>
 
 const char eap_code_str[][24] = { 
-    "EAP_UNSET",
-    "EAP_REQUEST",
-    "EAP_RESPONSE",
-    "EAP_SUCCESS",
-    "EAP_FAILURE" };
+    "eap_unset",
+    "eap_request",
+    "eap_response",
+    "eap_success",
+    "eap_failure" };
 
 const char nas5gs_msgid_str[][24] = {
-	"NAS_5GS_UNSET",
-	"NAS_5GS_START",
-	"NAS_5GS_NAS",
-	"NAS_5GS_NOTI",
-	"NAS_5GS_STOP" };
+	"nas_5gs_unset",
+	"nas_5gs_start",
+	"nas_5gs_nas",
+	"nas_5gs_noti",
+	"nas_5gs_stop" };
 
 const char *establish_cause_str(establishment_cause_t cause)
 {
@@ -31,6 +31,24 @@ const char *establish_cause_str(establishment_cause_t cause)
 			return "mcs-PriorityAccess";
 		default:
 			return "notAvailable";
+	}
+}
+
+const char *get_eap_code_str(eap_code_t eap_code)
+{
+	if (eap_code < EAP_UNSET || eap_code >= EAP_MAX_CODES) {
+		return "eap_code_invalid";
+	} else {
+		return eap_code_str[eap_code];
+	}
+}
+
+const char *get_nas5gs_msgid_str(msgid_type_t msg_id)
+{
+	if (msg_id < NAS_5GS_UNSET || msg_id >= NAS_5GS_MAX_ID) {
+		return "nas_5gs_invalid";
+	} else {
+		return nas5gs_msgid_str[msg_id];
 	}
 }
 

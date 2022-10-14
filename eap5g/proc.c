@@ -46,6 +46,7 @@ void proc_ipsec_noti(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 void proc_inform_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 {
 	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+	ike_msg->ike_choice		= choice_pdu_info;
 
 	if (n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS) {
 		memcpy(pdu_info, n3iwf_msg->payload, n3iwf_msg->payload_len);
@@ -124,6 +125,7 @@ void proc_pdu_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 void proc_pdu_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 {
 	n3_pdu_info_t *pdu_info = &ike_msg->ike_data.pdu_info;
+	ike_msg->ike_choice		= choice_pdu_info;
 
 	if (n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS) {
 		memcpy(pdu_info, n3iwf_msg->payload, n3iwf_msg->payload_len);

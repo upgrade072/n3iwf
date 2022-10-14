@@ -10,7 +10,7 @@ BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libutil.a \
 				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c io_worker.c proc.c intf.c comm.c
+SRCS			= main.c io_worker.c proc.c intf.c comm.c trace.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= eap5g
 DEST			= ../BIN

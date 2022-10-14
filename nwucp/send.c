@@ -5,7 +5,7 @@ extern __thread worker_ctx_t *WORKER_CTX;
 
 uint8_t create_eap_id()
 {
-	srand((unsigned int)time(NULL));
+	//srand((unsigned int)time(NULL));
 	uint8_t id = rand();
 	return id;
 }
@@ -70,6 +70,7 @@ void eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key
 	memcpy(&ike_msg->eap_5g, eap_5g, sizeof(eap_relay_t));
 	// n3_eap_result
 	n3_eap_result_t *eap_result = &ike_msg->ike_data.eap_result;
+	ike_msg->ike_choice	= choice_eap_result;
 	sprintf(eap_result->tcp_server_ip, "%s", MAIN_CTX->tcp_server.tcp_listen_addr);
 	eap_result->tcp_server_port = MAIN_CTX->tcp_server.tcp_listen_port;
 	sprintf(eap_result->internal_ip, "%s", ue_ctx->ip_addr);
@@ -102,6 +103,7 @@ void ike_send_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 	memcpy(&n3iwf_msg->ctx_info, &ue_ctx->ctx_info, sizeof(ctx_info_t));
 	// pdu_info part
 	memcpy(&ike_msg->ike_data.pdu_info, pdu_info, sizeof(n3_pdu_info_t));
+	ike_msg->ike_choice = choice_pdu_info;
 
 	/* start timer */
 	ue_ctx_stop_timer(ue_ctx);
@@ -129,6 +131,7 @@ void ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 	memcpy(&n3iwf_msg->ctx_info, &ue_ctx->ctx_info, sizeof(ctx_info_t));
 	// pdu_info part
 	memcpy(&ike_msg->ike_data.pdu_info, pdu_info, sizeof(n3_pdu_info_t));
+	ike_msg->ike_choice = choice_pdu_info;
 
 	/* start timer */
 	ue_ctx_stop_timer(ue_ctx);

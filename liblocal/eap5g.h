@@ -64,6 +64,8 @@ typedef struct eap_relay {
 
 /* ------------------------- eap5g.c --------------------------- */
 const   char *establish_cause_str(establishment_cause_t cause);
+const   char *get_eap_code_str(eap_code_t eap_code);
+const   char *get_nas5gs_msgid_str(msgid_type_t msg_id);
 size_t  encap_eap_req(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_size);
 size_t  encap_eap_result(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_size);
 void    parse_an_guami(unsigned char *params, size_t len, an_guami_t *guami);
