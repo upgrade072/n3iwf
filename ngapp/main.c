@@ -146,6 +146,11 @@ int initialize(main_ctx_t *MAIN_CTX)
 	return (0);
 }
 
+void main_tick(int conn_fd, short events, void *data)
+{
+	NGAP_STAT_PRINT(MAIN_CTX);
+}
+
 int main()
 {
 	evthread_use_pthreads();
@@ -156,7 +161,11 @@ int main()
 		exit(0);
 	}
 
-	while (1) {
-		sleep(1);
-	}
+	struct timeval ten_sec = {10, 0};
+	struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
+	event_add(ev_tick, &ten_sec);
+
+	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
+
+	return (0);
 }

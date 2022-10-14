@@ -151,3 +151,48 @@ void init_conn_list(main_ctx_t *MAIN_CTX)
 	MAIN_CTX->SHM_SCTPC_CONN->curr_pos = shm_prepare_pos;
 }
 
+void disp_conn_stat(main_ctx_t *MAIN_CTX)
+{
+	conn_curr_t *CURR_CONN = &MAIN_CTX->SHM_SCTPC_CONN->curr_conn[MAIN_CTX->SHM_SCTPC_CONN->curr_pos];
+
+	/* prepare */
+	for (int i = 0; i < link_node_length(&MAIN_CTX->sctp_stat_list); i++) {
+		sctp_stat_t *sctp_stat = link_node_get_nth_data(&MAIN_CTX->sctp_stat_list, i);
+		sctp_stat->used = 0;
+	}
+
+	/* calc & sum assoc stats */
+	for (int i = 0; i < MAX_SC_CONN_LIST; i++) {
+		conn_info_t *conn = &CURR_CONN->conn_info[i];
+		if (!conn->occupied) continue;
+
+		struct sctp_assoc_stats conn_total_stat = {0,};
+
+		for (int k = 0; k < conn->conn_num; k++) {
+			conn_status_t *conn_status = &conn->conn_status[k];
+
+			/* create key */
+			char temp_key[128] = {0,}; sprintf(temp_key, "%d", conn_status->assoc_id);
+
+			struct sctp_stat_t *sctp_stat = link_node_get_data_by_key(&MAIN_CTX->sctp_stat_list, temp_key);
+			if (sctp_stat == NULL) {
+				fprintf(stderr, "{dbg} create new sctp stat for [%s]\n", temp_key);
+				link_node *node = link_node_assign_key_order(&MAIN_CTX->sctp_stat_list, temp_key, sizeof(sctp_stat_t));
+				sctp_stat = (sctp_stat_t *)node->data;
+			}
+			get_assoc_stats_diff(conn_status->conns_fd, conn_status->assoc_id, sctp_stat);
+			sum_assoc_stats(&sctp_stat->curr_stat, &conn_total_stat);
+		}
+		print_assoc_stats(conn->name, &conn_total_stat);
+	}
+
+	/* remove unused node */
+	for (int i = link_node_length(&MAIN_CTX->sctp_stat_list) - 1; i >= 0; i--) {
+		link_node *node = link_node_get_nth(&MAIN_CTX->sctp_stat_list, i);
+		sctp_stat_t *sctp_stat = (sctp_stat_t *)node->data;
+		if (sctp_stat->used == 0) {
+			link_node_delete(&MAIN_CTX->sctp_stat_list, node);
+		}
+	}
+}
+

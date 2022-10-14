@@ -2,7 +2,7 @@
 #define DEBUG_ASN	1
 
 extern main_ctx_t *MAIN_CTX;
-static __thread worker_ctx_t *WORKER_CTX;
+__thread worker_ctx_t *WORKER_CTX;
 static __thread struct ossGlobal w;
 static __thread struct ossGlobal *world;
 static __thread int PDU_NUM;
@@ -23,14 +23,10 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	}
 
 	/* print pdu */
-#if 0
-	ossPrintPDU(world, PDU_NUM, ngap_pdu);
-#else
 	OssBuf outputData = { .length = 0, .value = NULL };
 	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
 	fprintf(stderr, "Send %s", outputData.value);
 	ossFreeBuf(world, outputData.value);
-#endif
 
 	/* encode pdu - (to APER) */
 	ossSetEncodingRules(world, OSS_PER_ALIGNED);
@@ -49,9 +45,13 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	fprintf(stderr, "{dbg} send_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", SCTP_MSG_SIZE(&send_msg), errno, strerror(errno));
 
 HNS_END:
-	ossFreePDU(world, PDU_NUM, ngap_pdu);
-	ossFreeBuf(world, pdu_buf.value);
-
+	NGAP_STAT_COUNT(ngap_pdu, 0);
+	if (ngap_pdu) {
+		ossFreePDU(world, PDU_NUM, ngap_pdu);
+	}
+	if (pdu_buf.value) {
+		ossFreeBuf(world, pdu_buf.value);
+	}
 	buffer->occupied = 0;
 }
 
@@ -88,14 +88,10 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	}
 
 	/* print pdu */
-#if 0
-	ossPrintPDU(world, PDU_NUM, ngap_pdu);
-#else
 	OssBuf outputData = { .length = 0, .value = NULL };
 	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
 	fprintf(stderr, "Recv %s", outputData.value);
 	ossFreeBuf(world, outputData.value);
-#endif
 
 	/* encode pdu - (to JER) */
 	ossSetEncodingRules(world, OSS_JSON);
@@ -127,9 +123,13 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	fprintf(stderr, "{dbg} recv_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", NGAP_MSG_SIZE(&recv_msg), errno, strerror(errno));
 
 HNR_END:
-	ossFreePDU(world, PDU_NUM, ngap_pdu);
-	ossFreeBuf(world, json_buf.value);
-
+	NGAP_STAT_COUNT(ngap_pdu, 1);
+	if (ngap_pdu) {
+		ossFreePDU(world, PDU_NUM, ngap_pdu);
+	}
+	if (json_buf.value) {
+		ossFreeBuf(world, json_buf.value);
+	}
 	buffer->occupied = 0;
 }
 

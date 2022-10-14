@@ -132,3 +132,86 @@ int get_assoc_state(int sd, int assoc_id, const char **state_str)
 		return status.sstat_state;
 	}
 }
+
+#define CALC_ASSIGN(a, b, val) 							\
+{ 														\
+	if (a->last_stat.val != b.val) { 					\
+		a->curr_stat.val = b.val - a->last_stat.val; 	\
+	} else {											\
+		a->curr_stat.val = 0;							\
+	}													\
+	a->last_stat.val = b.val; 							\
+}
+int get_assoc_stats_diff(int sd, int assoc_id, sctp_stat_t *count)
+{
+	if (sd <= 0 || assoc_id <= 0) {
+		return -1;
+    }   
+
+	struct sctp_assoc_stats stats = {0,};
+    socklen_t len = sizeof(struct sctp_assoc_stats);
+    
+    if (getsockopt(sd, SOL_SCTP, SCTP_GET_ASSOC_STATS, (char *)&stats, &len) != 0) {
+        fprintf(stderr, "%s() failed %s\n", __func__, strerror(errno));
+        return -1;
+    }
+
+	count->used = 1;
+
+	count->curr_stat.sas_maxrto = stats.sas_maxrto;
+	CALC_ASSIGN(count, stats, sas_isacks);
+	CALC_ASSIGN(count, stats, sas_osacks);
+	CALC_ASSIGN(count, stats, sas_opackets);
+	CALC_ASSIGN(count, stats, sas_ipackets);
+	CALC_ASSIGN(count, stats, sas_rtxchunks);
+	CALC_ASSIGN(count, stats, sas_outofseqtsns);
+	CALC_ASSIGN(count, stats, sas_idupchunks);
+	CALC_ASSIGN(count, stats, sas_gapcnt);
+	CALC_ASSIGN(count, stats, sas_ouodchunks);
+	CALC_ASSIGN(count, stats, sas_iuodchunks);
+	CALC_ASSIGN(count, stats, sas_oodchunks);
+	CALC_ASSIGN(count, stats, sas_iodchunks);
+	CALC_ASSIGN(count, stats, sas_octrlchunks);
+	CALC_ASSIGN(count, stats, sas_ictrlchunks);
+
+	return 0;
+}
+
+void sum_assoc_stats(struct sctp_assoc_stats *from, struct sctp_assoc_stats *to)
+{
+	to->sas_maxrto       =  from->sas_maxrto > to->sas_maxrto ? from->sas_maxrto : to->sas_maxrto;
+	to->sas_isacks       += from->sas_isacks;
+	to->sas_osacks       += from->sas_osacks;
+	to->sas_opackets     += from->sas_opackets;
+	to->sas_ipackets     += from->sas_ipackets;
+	to->sas_rtxchunks    += from->sas_rtxchunks;
+	to->sas_outofseqtsns += from->sas_outofseqtsns;
+	to->sas_idupchunks   += from->sas_idupchunks;
+	to->sas_gapcnt       += from->sas_gapcnt;
+	to->sas_ouodchunks   += from->sas_ouodchunks;
+	to->sas_iuodchunks   += from->sas_iuodchunks;
+	to->sas_oodchunks    += from->sas_oodchunks;
+	to->sas_iodchunks    += from->sas_iodchunks;
+	to->sas_octrlchunks  += from->sas_octrlchunks;
+	to->sas_ictrlchunks	 += from->sas_ictrlchunks;
+}
+
+void print_assoc_stats(const char *prefix, struct sctp_assoc_stats *stats)
+{
+	fprintf(stderr, "--- stats for [%s] ---\n", prefix);
+	fprintf(stderr, " Maximum Observed RTO for period   = (%llu)\n", stats->sas_maxrto);
+	fprintf(stderr, " SACKs received                    = (%llu)\n", stats->sas_isacks);
+	fprintf(stderr, " SACKs sent                        = (%llu)\n", stats->sas_osacks);
+	fprintf(stderr, " Packets sent                      = (%llu)\n", stats->sas_opackets);
+	fprintf(stderr, " Packets received                  = (%llu)\n", stats->sas_ipackets);
+	fprintf(stderr, " Retransmitted Chunks              = (%llu)\n", stats->sas_rtxchunks);
+	fprintf(stderr, " TSN received > next expected      = (%llu)\n", stats->sas_outofseqtsns);
+	fprintf(stderr, " Dups received (ordered+unordered) = (%llu)\n", stats->sas_idupchunks);
+	fprintf(stderr, " Gap Acknowledgements Received     = (%llu)\n", stats->sas_gapcnt);
+	fprintf(stderr, " Unordered data chunks sent        = (%llu)\n", stats->sas_ouodchunks);
+	fprintf(stderr, " Unordered data chunks received    = (%llu)\n", stats->sas_iuodchunks);
+	fprintf(stderr, " Ordered data chunks sent          = (%llu)\n", stats->sas_oodchunks);
+	fprintf(stderr, " Ordered data chunks received      = (%llu)\n", stats->sas_iodchunks);
+	fprintf(stderr, " Control chunks sent               = (%llu)\n", stats->sas_octrlchunks);
+	fprintf(stderr, " Control chunks received           = (%llu)\n", stats->sas_ictrlchunks);
+}

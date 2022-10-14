@@ -154,6 +154,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 void main_tick(evutil_socket_t fd, short events, void *data)
 {
 	disp_conn_list(MAIN_CTX);
+	disp_conn_stat(MAIN_CTX);
 }
 
 int main()

@@ -131,40 +131,39 @@ typedef struct sctp_client_t {
 	conn_status_t conn_status[MAX_SC_CONN_NUM];
 } sctp_client_t;
 
+typedef struct sctp_stat_t {
+	int used;
+	struct sctp_assoc_stats last_stat;
+	struct sctp_assoc_stats curr_stat;
+} sctp_stat_t;
+
 typedef struct main_ctx_t {
 	config_t CFG;
 	qid_info_t QID_INFO;
 	worker_thread_t BF_WORKERS;
 	worker_thread_t IO_WORKERS;
-	conn_list_t *SHM_SCTPC_CONN; // for application ref
+	conn_list_t *SHM_SCTPC_CONN;	// for application ref
 	struct event_base *evbase_main;
+
+	linked_list sctp_stat_list;
 } main_ctx_t;
-
-
-/* ------------------------- io_worker.c --------------------------- */
-void    handle_sock_send(int conn_fd, short events, void *data);
-void    handle_sock_recv(int conn_fd, short events, void *data);
-void    clear_connection(conn_status_t *conn_status);
-conn_status_t   *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg);
-void    check_connection(worker_ctx_t *worker_ctx);
-void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client);
-void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
-void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
-void    *io_worker_thread(void *arg);
-
-/* ------------------------- list.c --------------------------- */
-conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
-int     sort_conn_list(const void *a, const void *b);
-void    disp_conn_list(main_ctx_t *MAIN_CTX);
-void    init_conn_list(main_ctx_t *MAIN_CTX);
 
 /* ------------------------- stack.c --------------------------- */
 int     sctp_noti_assoc_change(struct sctp_assoc_change *sac, const char **event_state);
 int     sctp_noti_peer_addr_change(struct sctp_paddr_change *spc, const char **event_state);
 int     handle_sctp_notification(union sctp_notification *notif, size_t notif_len, const char **event_str, const char **event_state);
-char 	*get_path_state_str(int state);
+char    *get_path_state_str(int state);
 int     get_assoc_state(int sd, int assoc_id, const char **state_str);
+int     get_assoc_stats_diff(int sd, int assoc_id, sctp_stat_t *count);
+void    sum_assoc_stats(struct sctp_assoc_stats *from, struct sctp_assoc_stats *to);
+void    print_assoc_stats(const char *prefix, struct sctp_assoc_stats *stats);
+
+/* ------------------------- main.c --------------------------- */
+int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
+int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+void    main_tick(evutil_socket_t fd, short events, void *data);
+int     main();
 
 /* ------------------------- bf_worker.c --------------------------- */
 recv_buf_t      *find_empty_recv_buffer(worker_ctx_t *worker_ctx);
@@ -174,7 +173,25 @@ void    bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 void    bf_thrd_tick(evutil_socket_t fd, short events, void *data);
 void    *bf_worker_thread(void *arg);
 
-/* ------------------------- main.c --------------------------- */
-int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
+/* ------------------------- list.c --------------------------- */
+conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
+int     sort_conn_list(const void *a, const void *b);
+void    disp_conn_list(main_ctx_t *MAIN_CTX);
+void    init_conn_list(main_ctx_t *MAIN_CTX);
+void    disp_conn_stat(main_ctx_t *MAIN_CTX);
+
+/* ------------------------- io_worker.c --------------------------- */
+void    sock_write(int conn_fd, short events, void *data);
+void    handle_sock_send(int conn_fd, short events, void *data);
+void    relay_msg_to_ppid(sctp_msg_t *send_msg);
+void    handle_sock_recv(int conn_fd, short events, void *data);
+void    clear_connection(conn_status_t *conn_status);
+conn_status_t   *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg);
+void    check_path_state(sctp_client_t *client);
+void    clear_or_reconnect(sctp_client_t *client, worker_ctx_t *worker_ctx);
+void    check_connection(worker_ctx_t *worker_ctx);
+void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client);
+void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
+void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
+void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
+void    *io_worker_thread(void *arg);

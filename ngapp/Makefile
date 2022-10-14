@@ -13,7 +13,7 @@ BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libtcmalloc_minimal.a \
                   -lpthread -lrt -lm -ldl -lz -llzma -lstdc++
 
-SRCS			= main.c io_worker.c bf_worker.c
+SRCS			= main.c io_worker.c bf_worker.c stat.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= ngapp
 DEST			= ../BIN
