@@ -15,7 +15,6 @@
 #include <event2/util.h>
 #include <event2/thread.h>
 #include <sys/inotify.h>
-
 #include <sys/uio.h>
 
 #include <glib-2.0/glib.h>
@@ -26,6 +25,12 @@
 #include <ngap_intf.h>
 
 #include <eap_intf.h>
+
+#include <commlib.h>
+#include <mmclib.h>
+#include <overloadlib.h>
+#include <msgtrclib.h>
+#include <stm_msgtypes.h>
 
 #define MAX_WORKER_NUM      12
 #define UE_TAG(a)			(a->ctx_info.ue_id)

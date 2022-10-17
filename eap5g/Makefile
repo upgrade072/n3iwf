@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I./ -I../build/include -I../../../include
+BUILD_INC_PATH	= -I./ -I../build/include -I../../../include -I../PKG/MP/include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libudp.a \
@@ -8,6 +8,9 @@ BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  $(BUILD_LIBS_PATH)/eap5g.a \
 				  $(BUILD_LIBS_PATH)/libutil.a \
+				  ../PKG/MP/lib/libcomm.a \
+				  ../PKG/MP/lib/libmmc.a \
+				  ../PKG/MP/lib/libmsgtrc.a \
 				  -lpthread -lrt -lm -ldl -g
 
 SRCS			= main.c io_worker.c proc.c intf.c comm.c trace.c

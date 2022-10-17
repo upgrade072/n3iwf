@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I../build/include -I../../../include
+BUILD_INC_PATH	= -I../build/include -I../../../include -I../PKG/MP/include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libnode.a \
@@ -9,6 +9,9 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libsctp.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
+				  ../PKG/MP/lib/libcomm.a \
+				  ../PKG/MP/lib/libmmc.a \
+				  ../PKG/MP/lib/libmsgtrc.a \
 				  -lpthread -lrt -lm -ldl
 
 SRCS			= main.c list.c io_worker.c bf_worker.c stack.c

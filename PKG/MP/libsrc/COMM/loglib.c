@@ -460,91 +460,6 @@ __FAIL_RETURN:
 } //-- End of logPrint --//
 
 
-//----------------- 사용중지 ---------------------------------------------------
-//------------------------------------------------------------------------------
-#if 0
-int _LogPrint ( int logId, char *fName, char *func, int lNum, char*fmt, ...)
-{
-	int		ret;
-	char   	buff[TRCBUF_LEN], optBuf[256], tmp[64];
-	va_list	args;
-	struct timeval	curr;
-
-    pthread_mutex_lock (&loglibLock);
-
-    va_start(args, fmt);
-    (void)vsprintf(buff, fmt, args);
-    va_end(args);
-
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_MODE_DAILY)
-	{
-		// 현재 열려있는 파일정보와 현재 시각을 비교하여 날짜가 바뀌었는지 확인한다.
-		// - 날짜가 바뀌었으면 오늘 날짜 파일의 연다.
-		// - LOGLIB_MODE_nDAYS인 경우 n일전 파일을 지운다.
-		//
-		if (loglib_checkDate(logId) < 0)
-			goto __FAIL_RETURN;
-	}
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_MODE_HOURLY)
-	{
-		// 현재 열려있는 파일정보와 현재 시각을 비교하여 시간(hour)이 바뀌었는지 확인한다.
-		// - 시간이 바뀌었으면 현재 시간 파일의 연다.
-		// - 년-월-일 directory 구조 밑에 파일이 생성되므로 directory가 없으면 먼저 만든다.
-		//
-		if (loglib_checkTimeHour(logId) < 0)
-			goto __FAIL_RETURN;
-	}
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_MODE_LIMIT_SIZE)
-	{
-		// 현재 열려있는 파일이 limit를 초과했는지 확인한다.
-		// - 초과된 경우 이전파일을 rename하고 다시 연다.
-		//
-		if (loglib_checkLimitSize(logId) < 0)
-			goto __FAIL_RETURN;
-	}
-	if ( myLogTbl->logInfo[logId].fp == NULL) {
-		goto __FAIL_RETURN;
-	}
-
-	gettimeofday (&curr, NULL);
-	strcpy (optBuf, "");
-
-	// LOGLIB_TIME_STAMP이면 현재 시각을 맨 앞에 함께 기록한다.
-    //
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_TIME_STAMP) {
-		strftime(tmp, 32, "%m-%d %T", localtime(&curr.tv_sec));
-		sprintf (optBuf, "[%s.%03d] ", tmp, (int)(curr.tv_usec/1000));
-		/*sprintf (optBuf, "[%s.%06d] ", tmp, (int)curr.tv_usec);*/
-	}
-	// LOGLIB_FNAME_LNUM이면 소스 파일 이름과 라인 수를 함께 기록한다.
-    //
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_FNAME_LNUM) {
-		sprintf(tmp, "[%s:%s:%04d] ", fName, func, lNum);
-		strcat (optBuf, tmp);
-	}
-
-	if (myLogTbl->logInfo[logId].fp != NULL) {
-		ret = fprintf (myLogTbl->logInfo[logId].fp, "%s%s", optBuf, buff);
-		myLogTbl->logInfo[logId].lastTime = curr.tv_sec;
-	} else {
-		goto __FAIL_RETURN;
-	}
-
-	if (myLogTbl->logInfo[logId].pro.mode & LOGLIB_FLUSH_IMMEDIATE) {
-		fflush (myLogTbl->logInfo[logId].fp);
-	}
-
-    pthread_mutex_unlock (&loglibLock);
-
-	return ret;
-
-__FAIL_RETURN:
-    pthread_mutex_unlock (&loglibLock);
-    return -1;
-
-} //-- End of logPrint --//
-#endif
-
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 int __lprintf (int logId, int level, const char *fName, int lNum, char*fmt, ...)
@@ -553,12 +468,6 @@ int __lprintf (int logId, int level, const char *fName, int lNum, char*fmt, ...)
 	char   	buff[TRCBUF_LEN], optBuf[256], tmp[64];
 	va_list	args;
 	struct timeval	curr;
-
-#if 0
-	if(log_tbl[logId].level < level ) {
-		return 0;
-	}
-#endif
 
     pthread_mutex_lock (&loglibLock);
 
@@ -643,12 +552,6 @@ int __cdrprintf (int logId, int level, const char *fName, int lNum, char*fmt, ..
 	va_list	args;
 	struct timeval	curr;
 
-#if 0
-	if(log_tbl[logId].level < level ) {
-		return 0;
-	}
-#endif
-
     pthread_mutex_lock (&loglibLock);
 
     va_start(args, fmt);
@@ -731,12 +634,6 @@ int __cprintf (int logId, int level, const char *fName, int lNum, char*fmt, ...)
 	char   	buff[TRCBUF_LEN], optBuf[256], tmp[64];
 	va_list	args;
 	struct timeval	curr;
-
-#if 0
-	if(log_tbl[logId].level < level ) {
-		return 0;
-	}
-#endif
 
     pthread_mutex_lock (&loglibLock);
 
@@ -1257,3 +1154,50 @@ int loglib_attach_shm_level (int proc_index, int logId)
 }
 
 
+int initLog(char *appName)
+{
+    LoglibProperty  property;
+
+    if( loglib_initLog(appName) < 0 ) {
+        fprintf (stderr,"[%s, %d] loglib_initLog failed\n", FL);
+        return -1;
+    }
+
+    memset(&property, 0, sizeof(property));
+
+    strcpy(property.appName, appName);
+    property.num_suffix = 0;
+    property.limit_val  = 0;
+    property.mode       = LOGLIB_MODE_LIMIT_SIZE |
+                          LOGLIB_FLUSH_IMMEDIATE |
+                          LOGLIB_MODE_DAILY |
+                          LOGLIB_TIME_STAMP_FIRST;
+
+    strcpy(property.subdir_format, "%Y-%m-%d");
+
+    sprintf (property.fname, "%s/log/ERR_LOG/%s/%s.%s_log", getenv("IV_HOME"), appName, mySysName, appName);
+    if ((trcErrLogId = loglib_openLog(&property)) < 0 ) {
+        fprintf (stderr, "[%s.%d] loglib_openLog() fail[%s]\n", FL, property.fname);
+        return -1;
+    }
+
+    sprintf (property.fname, "%s/log/ERR_LOG/%s/%s.%s_sts", getenv("IV_HOME"), appName, mySysName, appName);
+    if ((trcLogId = loglib_openLog(&property)) < 0 ) {
+        fprintf (stderr, "[%s.%d] loglib_openLog() fail[%s]\n", FL, property.fname);
+        return -1;
+    }
+
+    /* for trc msg log */
+    property.mode       = 0;
+    property.mode       = LOGLIB_MODE_LIMIT_SIZE |
+                          LOGLIB_FLUSH_IMMEDIATE |
+                          LOGLIB_MODE_HOURLY |
+                          LOGLIB_TIME_STAMP_FIRST;
+    sprintf (property.fname, "%s/log/MSG_LOG/%s/%s.%s", getenv("IV_HOME"), appName, mySysName, appName);
+    if ((trcMsgLogId = loglib_openLog(&property)) < 0 ) {
+        fprintf (stderr, "[%s.%d] loglib_openLog() fail[%s]\n", FL, property.fname);
+        return -1;
+    }
+
+    return 0;
+}

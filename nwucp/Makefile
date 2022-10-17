@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I./ -I../build/include -I../build/include/glib-2.0
+BUILD_INC_PATH	= -I./ -I../build/include -I../build/include/glib-2.0 -I../PKG/MP/include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libnode.a \
@@ -10,6 +10,9 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  $(BUILD_LIBS_PATH)/libglib-1.3.a \
+				  ../PKG/MP/lib/libcomm.a \
+				  ../PKG/MP/lib/libmmc.a \
+				  ../PKG/MP/lib/libmsgtrc.a \
 				  -lpthread -lrt -lm -ldl -g
 
 SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c

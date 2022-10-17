@@ -205,6 +205,7 @@ extern void loglib_printMyLogTbl();
 extern int loglib_makeDefaultFile(int logId);
 extern void loglib_flush(int logId);
 extern int system_popen(char *cmd);
+extern int initLog(char *appName);
 
 #define lprintf(logId, lvl, fl, fmt, arg...) \
     ({\

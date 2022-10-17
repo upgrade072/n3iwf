@@ -32,6 +32,12 @@
 /* for NGAP en/decode */
 #include <NGAP-PDU-Descriptions.h>
 
+#include <commlib.h>
+#include <mmclib.h>
+#include <overloadlib.h>
+#include <msgtrclib.h>
+#include <stm_msgtypes.h>
+
 /* for STAT count */
 typedef enum ngap_pdu_type_t {
 	NPTE_ngapPduTypeUnused = 0,

@@ -16,7 +16,7 @@ LIB_PATH = -L../../lib
 
 LIBS		= -lcomm -lm
 
-SRCS		=	olcd_main.c olcd_log.c olcd_cfg.c 
+SRCS		=	olcd_main.c olcd_cfg.c 
 
 OBJS		= $(SRCS:.c=.o)
 
@@ -39,6 +39,7 @@ $(AOUT): $(OBJS)
 
 install:
 	\cp $(AOUT) $(DEST)
+	\cp $(AOUT) ../../../../BIN
 
 clean:
 	\rm -f $(OBJS) $(AOUT) core

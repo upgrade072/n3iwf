@@ -23,6 +23,12 @@
 #include <event2/event.h>
 #include <event2/thread.h>
 
+#include <commlib.h>
+#include <mmclib.h>
+#include <overloadlib.h>
+#include <msgtrclib.h>
+#include <stm_msgtypes.h>
+
 #include "sctp_intf.h"
 
 typedef union {

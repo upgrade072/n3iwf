@@ -1,4 +1,7 @@
-SUBDIRS := tools/* ngap_asn comm_include liblocal eap5g sctpc ngapp nwucp
+
+MP_PKGS = PKG/MP/libsrc/* PKG/MP/src/*
+
+SUBDIRS := $(MP_PKGS) tools/* ngap_asn comm_include liblocal eap5g sctpc ngapp nwucp
 
 subdirs: $(SUBDIRS)
 

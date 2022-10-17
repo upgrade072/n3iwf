@@ -1,5 +1,8 @@
 #include <eapp.h>
 
+char mySysName[COMM_MAX_NAME_LEN];
+char myAppName[COMM_MAX_NAME_LEN];
+
 main_ctx_t main_ctx, *MAIN_CTX = &main_ctx;
 
 int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
@@ -32,6 +35,20 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
 
 int initialize(main_ctx_t *MAIN_CTX)
 {
+	//  
+	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
+	sprintf(myAppName, "%.15s", "EAP5G"); 
+	//  
+	initLog(myAppName);
+	// start with Log Level Error 
+	loglib_setLogLevel(ELI, LLE);
+	loglib_setLogLevel(DLI, LLE);
+	loglib_setLogLevel(MLI, LLE);
+	// let's start process 
+	ERRLOG(LLE, FL, "Welcome ---------------\n");
+	TRCLOG(LLE, FL, "Welcome ---------------\n");
+	MSGLOG(LLE, FL, "Welcome ---------------\n");
+
 	/* load config */
 	config_init(&MAIN_CTX->CFG);
 	if (!config_read_file(&MAIN_CTX->CFG, "./eap5g.cfg")) {

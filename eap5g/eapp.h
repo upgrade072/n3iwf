@@ -24,6 +24,12 @@
 
 #include <eap_intf.h>
 
+#include <commlib.h>
+#include <mmclib.h>
+#include <overloadlib.h>
+#include <msgtrclib.h>
+#include <stm_msgtypes.h>
+
 #define MAX_WORKER_NUM      12
 
 #define MAX_DISTR_BUFF_SIZE 65536
