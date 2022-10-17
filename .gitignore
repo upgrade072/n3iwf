@@ -10,3 +10,6 @@ add.sh
 *.a
 *.swp
 *.bin
+BIN
+PKG/MP/bin
+PKG/MP/lib

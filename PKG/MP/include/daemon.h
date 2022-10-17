@@ -1,0 +1,39 @@
+#ifndef __DAEMON_H__
+#define	__DAEMON_H__
+
+#define PROC_IND_IXPC		1
+#define	PROC_IND_SAMD		2
+#define PROC_IND_SHMD		3
+#define	PROC_IND_STAT		4
+#define PROC_IND_DBM		5
+#define PROC_IND_SSMGR		6
+#define	PROC_IND_PCAP		7
+#define	PROC_IND_NSTEP		8
+#define	PROC_IND_ROME		9
+#define	PROC_IND_AUTH		10
+#define	PROC_IND_ACCT		11
+#define PROC_IND_DBAGT		12
+#define PROC_IND_LOGD		13
+#define PROC_IND_RELAYD		14
+#define PROC_IND_MAX		24
+
+#define	MULTI_PROC_MAX		10
+#define	PROC_SSMGR_MAX		MULTI_PROC_MAX
+
+#define	PROC_NAME_IXPC		"IXPC"
+#define PROC_NAME_COND		"COND"
+#define PROC_NAME_DBM		"DBM"
+#define PROC_NAME_MMCD		"MMCD"
+
+#define	PROC_NAME_SSMGR		"SSMGRD"
+#define	PROC_NAME_PCAP		"PCAPD"
+#define	PROC_NAME_NSTEP		"NSTEPIF"
+#define	PROC_NAME_ROME		"ROMEIF"
+#define	PROC_NAME_AUTH		"AUTHIF"
+#define	PROC_NAME_ACCT		"ACNTIF"
+#define	PROC_NAME_DBAGT		"REDISD"
+#define	PROC_NAME_LOGD		"LOGD"
+#define	PROC_NAME_RELAYD	"RELAYD"
+
+
+#endif	/* __DAEMON_H__ */
