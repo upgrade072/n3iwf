@@ -76,7 +76,11 @@ int initialize(main_ctx_t *MAIN_CTX)
 {
 	//  
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
-	sprintf(myAppName, "%.15s", "NWUCP"); 
+	sprintf(myAppName, "%.15s", "NGAPP"); 
+	if (keepalivelib_init(myAppName) < 0) {
+		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
 	//  
 	initLog(myAppName);
 	// start with Log Level Error 
@@ -90,7 +94,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* load config */
     config_init(&MAIN_CTX->CFG);
-    if (!config_read_file(&MAIN_CTX->CFG, "./ngapp.cfg")) {
+
+	char tmp_path[1024] = {0,};
+	sprintf(tmp_path, "%s/data/N3IWF_CONFIG/ngapp.cfg", getenv("IV_HOME"));
+    if (!config_read_file(&MAIN_CTX->CFG, tmp_path)) {
         fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
             __func__,
             config_error_file(&MAIN_CTX->CFG),
@@ -165,6 +172,8 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 void main_tick(int conn_fd, short events, void *data)
 {
+	keepalivelib_increase();
+
 	NGAP_STAT_PRINT(MAIN_CTX);
 }
 
@@ -178,9 +187,9 @@ int main()
 		exit(0);
 	}
 
-	struct timeval ten_sec = {10, 0};
+	struct timeval one_sec = {1, 0};
 	struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
-	event_add(ev_tick, &ten_sec);
+	event_add(ev_tick, &one_sec);
 
 	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 

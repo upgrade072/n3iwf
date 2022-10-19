@@ -38,6 +38,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//  
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "EAP5G"); 
+	if (keepalivelib_init(myAppName) < 0) {
+		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
 	//  
 	initLog(myAppName);
 	// start with Log Level Error 
@@ -51,7 +55,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* load config */
 	config_init(&MAIN_CTX->CFG);
-	if (!config_read_file(&MAIN_CTX->CFG, "./eap5g.cfg")) {
+
+	char tmp_path[1024] = {0,};
+	sprintf(tmp_path, "%s/data/N3IWF_CONFIG/eap5g.cfg", getenv("IV_HOME"));
+	if (!config_read_file(&MAIN_CTX->CFG, tmp_path)) {
         fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
             __func__,
             config_error_file(&MAIN_CTX->CFG),
@@ -128,6 +135,11 @@ int initialize(main_ctx_t *MAIN_CTX)
 	return 0;
 }
 
+void main_tick(evutil_socket_t fd, short events, void *data)
+{
+	keepalivelib_increase();
+}
+
 int main()
 {
 	evthread_use_pthreads();
@@ -137,6 +149,10 @@ int main()
 	if (initialize(MAIN_CTX) < 0) {
 		exit(0);
 	}
+
+	struct timeval one_sec = {1, 0};
+	struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
+	event_add(ev_tick, &one_sec);
 
 	/* udp read -> worker~RR */
 	struct event *ev_udp_read = event_new(MAIN_CTX->evbase_main, MAIN_CTX->udp_sock, EV_READ | EV_PERSIST, udp_sock_read_callback, MAIN_CTX);

@@ -10,7 +10,9 @@ int load_config(config_t *CFG)
 	/* load config */
 	config_init(CFG);
 
-    if (!config_read_file(CFG, "./nwucp.cfg")) {
+	char tmp_path[1024] = {0,};
+	sprintf(tmp_path, "%s/data/N3IWF_CONFIG/nwucp.cfg", getenv("IV_HOME"));
+    if (!config_read_file(CFG, tmp_path)) {
         fprintf(stderr, "cfg err!\n");
         fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
                 __func__,
@@ -135,6 +137,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "NWUCP");
+	if (keepalivelib_init(myAppName) < 0) {
+		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
 	// 
 	initLog(myAppName);
 	// start with Log Level Error 
@@ -172,7 +178,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 void main_tick(int conn_fd, short events, void *data)
 {
-	//fprintf(stderr, "%s()\n", __func__);
+	keepalivelib_increase();
 }
 
 int main()

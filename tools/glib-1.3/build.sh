@@ -11,7 +11,7 @@ fi
 
 VERSION="1.3.15"
 if [ ! -f glib-${VERSION}.tar.gz ]; then
-	wget https://download.gnome.org/sources/glib/1.3/glib-${VERSION}.tar.gz
+	wget https://download.gnome.org/sources/glib/1.3/glib-${VERSION}.tar.gz --no-check-certificate
 fi
 
 rm -rf glib-${VERSION}

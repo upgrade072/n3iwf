@@ -1,7 +1,7 @@
 
 MP_PKGS = PKG/MP/libsrc/* PKG/MP/src/*
 
-SUBDIRS := $(MP_PKGS) tools/* ngap_asn comm_include liblocal eap5g sctpc ngapp nwucp
+SUBDIRS := $(MP_PKGS) tools/* ngap_asn comm_include liblocal eap5g sctpc ngapp nwucp dbm
 
 subdirs: $(SUBDIRS)
 

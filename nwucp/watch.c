@@ -57,7 +57,7 @@ int watch_directory_init(struct event_base *evbase, const char *path_name, void 
 void start_watching_dir(main_ctx_t *MAIN_CTX)
 {
 	char path[10240] = {0,};
-	sprintf(path, "%s/data", getenv("HOME"));
+	sprintf(path, "%s/data", getenv("IV_HOME"));
 	watch_directory_init(MAIN_CTX->evbase_main, path, watch_sctpc_restart);
 }
 

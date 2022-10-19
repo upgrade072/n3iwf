@@ -152,7 +152,8 @@ int get_assoc_stats_diff(int sd, int assoc_id, sctp_stat_t *count)
     socklen_t len = sizeof(struct sctp_assoc_stats);
     
     if (getsockopt(sd, SOL_SCTP, SCTP_GET_ASSOC_STATS, (char *)&stats, &len) != 0) {
-        fprintf(stderr, "%s() failed %s\n", __func__, strerror(errno));
+		/* it means not connected */
+        //fprintf(stderr, "%s() failed %s\n", __func__, strerror(errno));
         return -1;
     }
 
