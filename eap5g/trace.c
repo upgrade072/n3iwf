@@ -59,6 +59,8 @@ int TRACE_MAKE_MSG_HEAD(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg, int directio
     len += sprintf(&body[len], " TRACE KEY          : %s\n", n3iwf_msg->ctx_info.ue_id);
     len += sprintf(&body[len], " TRACE BLOCK        : %s\n", myAppName);
     len += sprintf(&body[len], "---------------------------------------------------------------\n");
+    len += sprintf(&body[len], " CP ID                = %d\n", n3iwf_msg->ctx_info.cp_id);
+    len += sprintf(&body[len], " UP ID                = %d\n", n3iwf_msg->ctx_info.up_id);
 	if (direction == DIR_RECEIVE) {
 		len += sprintf(&body[len], " %-19s  = %s:%d -> EAP5G\n", "DIRECT", ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port);
 	} else{

@@ -89,11 +89,13 @@ int TRACE_MAKE_MSG_HEAD(ue_ctx_t *ue_ctx, int direction, const char *PROC_STR, T
     len += sprintf(&body[len], " TRACE KEY          : %s\n", ue_ctx->ctx_info.ue_id);
     len += sprintf(&body[len], " TRACE BLOCK        : %s\n", myAppName);
     len += sprintf(&body[len], "---------------------------------------------------------------\n");
+    len += sprintf(&body[len], " RAN ID               = %lu\n", ue_ctx->amf_tag.ran_ue_id);
+    len += sprintf(&body[len], " AMF ID               = %lu\n", ue_ctx->amf_tag.amf_ue_id);
 	switch (direction)
 	{
 		case DIR_UE_TO_ME:
 			if (ue_ctx->sock_ctx != NULL) {
-				len += sprintf(&body[len], " %-19s  = UE (%s:%d) -> NWUCP\n", "DIRECT", ue_ctx->sock_ctx->client_ipaddr, ue_ctx->sock_ctx->client_port);
+				len += sprintf(&body[len], " %-19s  = UE TCP (%s:%d) -> NWUCP\n", "DIRECT", ue_ctx->sock_ctx->client_ipaddr, ue_ctx->sock_ctx->client_port);
 			} else {
 				len += sprintf(&body[len], " FATAL, SOCK_CTX not exist!\n");
 			}
@@ -101,7 +103,7 @@ int TRACE_MAKE_MSG_HEAD(ue_ctx_t *ue_ctx, int direction, const char *PROC_STR, T
 			break;
 		case DIR_ME_TO_UE:
 			if (ue_ctx->sock_ctx != NULL) {
-				len += sprintf(&body[len], " %-19s  = NWUCP -> UE (%s:%d)\n", "DIRECT", ue_ctx->sock_ctx->client_ipaddr, ue_ctx->sock_ctx->client_port);
+				len += sprintf(&body[len], " %-19s  = NWUCP -> UE TCP (%s:%d)\n", "DIRECT", ue_ctx->sock_ctx->client_ipaddr, ue_ctx->sock_ctx->client_port);
 			} else {
 				len += sprintf(&body[len], " FATAL, SOCK_CTX not exist!\n");
 			}
