@@ -199,20 +199,20 @@ void sum_assoc_stats(struct sctp_assoc_stats *from, struct sctp_assoc_stats *to)
 
 void print_assoc_stats(const char *prefix, struct sctp_assoc_stats *stats)
 {
-	fprintf(stderr, "--- stats for [%s] ---\n", prefix);
-	fprintf(stderr, " Maximum Observed RTO for period   = (%llu)\n", stats->sas_maxrto);
-	fprintf(stderr, " SACKs received                    = (%llu)\n", stats->sas_isacks);
-	fprintf(stderr, " SACKs sent                        = (%llu)\n", stats->sas_osacks);
-	fprintf(stderr, " Packets sent                      = (%llu)\n", stats->sas_opackets);
-	fprintf(stderr, " Packets received                  = (%llu)\n", stats->sas_ipackets);
-	fprintf(stderr, " Retransmitted Chunks              = (%llu)\n", stats->sas_rtxchunks);
-	fprintf(stderr, " TSN received > next expected      = (%llu)\n", stats->sas_outofseqtsns);
-	fprintf(stderr, " Dups received (ordered+unordered) = (%llu)\n", stats->sas_idupchunks);
-	fprintf(stderr, " Gap Acknowledgements Received     = (%llu)\n", stats->sas_gapcnt);
-	fprintf(stderr, " Unordered data chunks sent        = (%llu)\n", stats->sas_ouodchunks);
-	fprintf(stderr, " Unordered data chunks received    = (%llu)\n", stats->sas_iuodchunks);
-	fprintf(stderr, " Ordered data chunks sent          = (%llu)\n", stats->sas_oodchunks);
-	fprintf(stderr, " Ordered data chunks received      = (%llu)\n", stats->sas_iodchunks);
-	fprintf(stderr, " Control chunks sent               = (%llu)\n", stats->sas_octrlchunks);
-	fprintf(stderr, " Control chunks received           = (%llu)\n", stats->sas_ictrlchunks);
+	TRCLOG(LLE, FL, "--- stats for [%s] ---\n", prefix);
+	TRCLOG(LLE, FL, " Maximum Observed RTO for period   = (%llu)\n", stats->sas_maxrto);
+	TRCLOG(LLE, FL, " SACKs received                    = (%llu)\n", stats->sas_isacks);
+	TRCLOG(LLE, FL, " SACKs sent                        = (%llu)\n", stats->sas_osacks);
+	TRCLOG(LLE, FL, " Packets sent                      = (%llu)\n", stats->sas_opackets);
+	TRCLOG(LLE, FL, " Packets received                  = (%llu)\n", stats->sas_ipackets);
+	TRCLOG(LLE, FL, " Retransmitted Chunks              = (%llu)\n", stats->sas_rtxchunks);
+	TRCLOG(LLE, FL, " TSN received > next expected      = (%llu)\n", stats->sas_outofseqtsns);
+	TRCLOG(LLE, FL, " Dups received (ordered+unordered) = (%llu)\n", stats->sas_idupchunks);
+	TRCLOG(LLE, FL, " Gap Acknowledgements Received     = (%llu)\n", stats->sas_gapcnt);
+	TRCLOG(LLE, FL, " Unordered data chunks sent        = (%llu)\n", stats->sas_ouodchunks);
+	TRCLOG(LLE, FL, " Unordered data chunks received    = (%llu)\n", stats->sas_iuodchunks);
+	TRCLOG(LLE, FL, " Ordered data chunks sent          = (%llu)\n", stats->sas_oodchunks);
+	TRCLOG(LLE, FL, " Ordered data chunks received      = (%llu)\n", stats->sas_iodchunks);
+	TRCLOG(LLE, FL, " Control chunks sent               = (%llu)\n", stats->sas_octrlchunks);
+	TRCLOG(LLE, FL, " Control chunks received           = (%llu)\n", stats->sas_ictrlchunks);
 }

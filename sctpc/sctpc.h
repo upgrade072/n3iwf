@@ -75,6 +75,8 @@ typedef struct ppid_pqid_t {
 } ppid_pqid_t;
 
 typedef struct qid_info_t {
+	int main_qid;
+	int ixpc_qid;
 	int sctp_send_relay;
 	int sctp_recv_relay_num;
 	ppid_pqid_t *sctp_recv_relay;
@@ -151,7 +153,8 @@ typedef struct main_ctx_t {
 	conn_list_t *SHM_SCTPC_CONN;	// for application ref
 	struct event_base *evbase_main;
 
-	linked_list sctp_stat_list;
+	linked_list sctp_stat_list;		// calc stat
+	linked_list SCTP_STAT;			// SUM by conn_name
 } main_ctx_t;
 
 /* ------------------------- stack.c --------------------------- */
@@ -164,12 +167,13 @@ int     get_assoc_stats_diff(int sd, int assoc_id, sctp_stat_t *count);
 void    sum_assoc_stats(struct sctp_assoc_stats *from, struct sctp_assoc_stats *to);
 void    print_assoc_stats(const char *prefix, struct sctp_assoc_stats *stats);
 
-/* ------------------------- main.c --------------------------- */
-int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
-void    main_tick(evutil_socket_t fd, short events, void *data);
-int     main();
+/* ------------------------- list.c --------------------------- */
+conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
+int     sort_conn_list(const void *a, const void *b);
+void    disp_conn_list(main_ctx_t *MAIN_CTX);
+void    init_conn_list(main_ctx_t *MAIN_CTX);
+void    disp_conn_stat(main_ctx_t *MAIN_CTX);
+void    send_conn_stat(main_ctx_t *MAIN_CTX, IxpcQMsgType *rxIxpcMsg);
 
 /* ------------------------- bf_worker.c --------------------------- */
 recv_buf_t      *find_empty_recv_buffer(worker_ctx_t *worker_ctx);
@@ -179,12 +183,13 @@ void    bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 void    bf_thrd_tick(evutil_socket_t fd, short events, void *data);
 void    *bf_worker_thread(void *arg);
 
-/* ------------------------- list.c --------------------------- */
-conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
-int     sort_conn_list(const void *a, const void *b);
-void    disp_conn_list(main_ctx_t *MAIN_CTX);
-void    init_conn_list(main_ctx_t *MAIN_CTX);
-void    disp_conn_stat(main_ctx_t *MAIN_CTX);
+/* ------------------------- main.c --------------------------- */
+int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
+int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+void    main_tick(evutil_socket_t fd, short events, void *data);
+void    main_msgq_read_callback(evutil_socket_t fd, short events, void *data);
+int     main();
 
 /* ------------------------- io_worker.c --------------------------- */
 void    sock_write(int conn_fd, short events, void *data);

@@ -166,7 +166,8 @@ void disp_conn_stat(main_ctx_t *MAIN_CTX)
 		conn_info_t *conn = &CURR_CONN->conn_info[i];
 		if (!conn->occupied) continue;
 
-		struct sctp_assoc_stats conn_total_stat = {0,};
+		link_node *STAT_NODE = link_node_assign_key_order(&MAIN_CTX->SCTP_STAT, conn->name, sizeof(struct sctp_assoc_stats));
+		struct sctp_assoc_stats *HOST_STAT = (struct sctp_assoc_stats *)STAT_NODE->data;
 
 		for (int k = 0; k < conn->conn_num; k++) {
 			conn_status_t *conn_status = &conn->conn_status[k];
@@ -181,9 +182,8 @@ void disp_conn_stat(main_ctx_t *MAIN_CTX)
 				sctp_stat = (sctp_stat_t *)node->data;
 			}
 			get_assoc_stats_diff(conn_status->conns_fd, conn_status->assoc_id, sctp_stat);
-			sum_assoc_stats(&sctp_stat->curr_stat, &conn_total_stat);
+			sum_assoc_stats(&sctp_stat->curr_stat, HOST_STAT);
 		}
-		print_assoc_stats(conn->name, &conn_total_stat);
 	}
 
 	/* remove unused node */
@@ -196,3 +196,70 @@ void disp_conn_stat(main_ctx_t *MAIN_CTX)
 	}
 }
 
+void send_conn_stat(main_ctx_t *MAIN_CTX, IxpcQMsgType *rxIxpcMsg)
+{
+	int len = sizeof(int), txLen = 0;   
+    int statCnt = 0;
+            
+    GeneralQMsgType sxGenQMsg;
+    memset(&sxGenQMsg, 0x00, sizeof(GeneralQMsgType));
+        
+    IxpcQMsgType *sxIxpcMsg = (IxpcQMsgType*)sxGenQMsg.body;
+    
+    STM_CommonStatMsgType *commStatMsg=(STM_CommonStatMsgType *)sxIxpcMsg->body;
+    STM_CommonStatMsg     *commStatItem=NULL;
+    
+    sxGenQMsg.mtype = MTYPE_STATISTICS_REPORT;
+    sxIxpcMsg->head.msgId = MSGID_SCTP_STATISTIC_REPORT;
+    sxIxpcMsg->head.seqNo = 0; // start from 1
+            
+    strcpy(sxIxpcMsg->head.srcSysName, rxIxpcMsg->head.dstSysName);
+    strcpy(sxIxpcMsg->head.srcAppName, rxIxpcMsg->head.dstAppName);
+    strcpy(sxIxpcMsg->head.dstSysName, rxIxpcMsg->head.srcSysName);
+    strcpy(sxIxpcMsg->head.dstAppName, rxIxpcMsg->head.srcAppName);
+
+	for (int i = 0; i < link_node_length(&MAIN_CTX->SCTP_STAT); i++) {
+		link_node *STAT_NODE = link_node_get_nth(&MAIN_CTX->SCTP_STAT, i);
+		struct sctp_assoc_stats *HOST_STAT = (struct sctp_assoc_stats *)STAT_NODE->data;
+
+		print_assoc_stats(STAT_NODE->key, HOST_STAT);
+
+		commStatItem = &commStatMsg->info[statCnt]; ++statCnt;
+		memset(commStatItem, 0x00, sizeof(STM_CommonStatMsg));
+		len += sizeof (STM_CommonStatMsg);
+
+		snprintf(commStatItem->strkey1, sizeof(commStatItem->strkey1), "%s", STAT_NODE->key);
+
+		int index = 0;
+		commStatItem->ldata[index++] = HOST_STAT->sas_maxrto;
+		commStatItem->ldata[index++] = HOST_STAT->sas_isacks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_osacks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_opackets;
+		commStatItem->ldata[index++] = HOST_STAT->sas_ipackets;
+		commStatItem->ldata[index++] = HOST_STAT->sas_rtxchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_outofseqtsns;
+		commStatItem->ldata[index++] = HOST_STAT->sas_idupchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_gapcnt;
+		commStatItem->ldata[index++] = HOST_STAT->sas_ouodchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_iuodchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_oodchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_iodchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_octrlchunks;
+		commStatItem->ldata[index++] = HOST_STAT->sas_ictrlchunks;
+	}
+	commStatMsg->num = statCnt;
+	ERRLOG(LLE, FL, "[SCTP / STAT Write Succeed stat_count=(%d) sedNo=(%d) body/txLen=(%d:%d)]\n",
+			statCnt, sxIxpcMsg->head.seqNo, len, txLen);
+
+	sxIxpcMsg->head.segFlag = 0;
+	sxIxpcMsg->head.seqNo++;
+	sxIxpcMsg->head.bodyLen = len;
+	txLen = sizeof(sxIxpcMsg->head) + sxIxpcMsg->head.bodyLen;
+
+	if (msgsnd(MAIN_CTX->QID_INFO.ixpc_qid, (void*)&sxGenQMsg, txLen, IPC_NOWAIT) < 0) {
+		ERRLOG(LLE, FL, "DBG] %s() status send fail IXPC qid[%d] err[%s]\n", __func__, MAIN_CTX->QID_INFO.ixpc_qid, strerror(errno));
+	}
+
+	/* clear STAT */
+	link_node_delete_all(&MAIN_CTX->SCTP_STAT, NULL);
+}
