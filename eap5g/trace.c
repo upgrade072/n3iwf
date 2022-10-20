@@ -1,10 +1,79 @@
 #include <eapp.h>
 
 extern main_ctx_t *MAIN_CTX;
+extern char mySysName[COMM_MAX_NAME_LEN];
+extern char myAppName[COMM_MAX_NAME_LEN];
 
-size_t trace_ike_msg(char *body, ike_msg_t *ike_msg)
+void IKE_TRACE(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg, int direction)
 {
-	size_t len = 0;
+	if (direction != DIR_RECEIVE && direction != DIR_SEND) {
+		return;
+	}
+	if (msgtrclib_traceOk(TRC_CHECK_START, 0, n3iwf_msg->ctx_info.ue_id, NULL) == 0) {
+		return;
+	}
+
+	TraceMsgHead head;
+	memset(&head, 0x00, sizeof(TraceMsgHead));
+
+	char trace_buff[65535] = {0,};
+
+	TRACE_MAKE_MSG_HEAD(n3iwf_msg, ike_msg, direction, &head, trace_buff);
+	TRACE_MAKE_MSG_BODY(ike_msg, trace_buff);
+
+	msgtrclib_sendTraceMsg(&head, trace_buff);
+}
+
+int TRACE_MAKE_MSG_HEAD(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg, int direction, TraceMsgHead *head, char *body)
+{   
+    /* set TraceMsgHead */
+    head->direction = direction;
+    if (direction == DIR_RECEIVE) {
+        head->originSysType = TRACE_NODE_UP;
+        head->destSysType = TRACE_NODE_CP;
+    } else { 
+        head->originSysType = TRACE_NODE_CP;
+        head->destSysType = TRACE_NODE_UP;
+    }
+    sprintf(head->opCode, "%s", n3_msg_code_str(n3iwf_msg->msg_code));
+    sprintf(head->primaryKey, n3iwf_msg->ctx_info.ue_id);
+
+	struct timespec session_time = {0,};
+	clock_gettime(CLOCK_REALTIME, &session_time);
+    
+    /* set body */
+    struct tm *cur_tm = localtime(&session_time.tv_sec);
+    int tv_nsec = session_time.tv_nsec;
+    
+    int len = 0;
+    len  = sprintf(&body[len], "===============================================================\n");
+    len += sprintf(&body[len], " TRACE TIME         : %d-%02d-%02d %02d:%02d:%02d.%d\n",
+            1900 + cur_tm->tm_year,
+            1 + cur_tm->tm_mon,
+            cur_tm->tm_mday,
+            cur_tm->tm_hour,
+            cur_tm->tm_min,
+            cur_tm->tm_sec, 
+            tv_nsec);
+    len += sprintf(&body[len], " TRACE SYSTEM       : %s\n", mySysName);
+    len += sprintf(&body[len], " TRACE KEY          : %s\n", n3iwf_msg->ctx_info.ue_id);
+    len += sprintf(&body[len], " TRACE BLOCK        : %s\n", myAppName);
+    len += sprintf(&body[len], "---------------------------------------------------------------\n");
+	if (direction == DIR_RECEIVE) {
+		len += sprintf(&body[len], " %-19s  = %s:%d -> EAP5G\n", "DIRECT", ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port);
+	} else{
+		len += sprintf(&body[len], " %-19s  = EAP5G -> %s:%d\n", "DIRECT", ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port);
+	}
+	len += sprintf(&body[len], " %-19s  = (%.2d) %s\n", "MSG_CODE", n3iwf_msg->msg_code, n3_msg_code_str(n3iwf_msg->msg_code));
+	len += sprintf(&body[len], " %-19s  = (%.2d) %s\n", "RES_CODE", n3iwf_msg->res_code, n3_res_code_str(n3iwf_msg->res_code));
+    len += sprintf(&body[len], "---------------------------------------------------------------\n");
+
+    return len;
+}  
+
+size_t TRACE_MAKE_MSG_BODY(ike_msg_t *ike_msg, char *body)
+{
+	size_t len = strlen(body);
 
 	len += sprintf(body + len, " IKE TAG\n");
 	if (strlen(ike_msg->ike_tag.up_from_addr)) {

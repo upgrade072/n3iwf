@@ -124,6 +124,7 @@ void ue_ctx_release(int conn_fd, short events, void *data)
 
 	memset(&ue_ctx->ike_tag, 0x00, sizeof(ike_tag_t));
 	memset(&ue_ctx->amf_tag, 0x00, sizeof(amf_tag_t));
+	memset(&ue_ctx->sctp_tag, 0x00, sizeof(sctp_tag_t));
 	memset(&ue_ctx->ctx_info, 0x00, sizeof(ctx_info_t));
 	memset(&ue_ctx->eap_5g, 0x00, sizeof(eap_relay_t));
 

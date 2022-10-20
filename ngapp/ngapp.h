@@ -28,6 +28,7 @@
 
 #include <sctp_intf.h>
 #include "ngap_intf.h"
+#include <libngapp.h>
 
 /* for NGAP en/decode */
 #include <NGAP-PDU-Descriptions.h>
@@ -47,86 +48,6 @@ typedef enum ngap_pdu_type_t {
 	NPTE_ngapPduTypeUnknown
 } ngap_pdu_type_t;
 
-typedef enum ngap_proc_code_t {
-    NPCE_AMFConfigurationUpdate = 0,
-    NPCE_AMFStatusIndication,
-    NPCE_CellTrafficTrace,
-    NPCE_DeactivateTrace,
-    NPCE_DownlinkNASTransport,
-    NPCE_DownlinkNonUEAssociatedNRPPaTransport,
-    NPCE_DownlinkRANConfigurationTransfer,
-    NPCE_DownlinkRANStatusTransfer,
-    NPCE_DownlinkUEAssociatedNRPPaTransport,
-    NPCE_ErrorIndication,
-    NPCE_HandoverCancel,
-    NPCE_HandoverNotification,
-    NPCE_HandoverPreparation,
-    NPCE_HandoverResourceAllocation,
-    NPCE_InitialContextSetup,
-    NPCE_InitialUEMessage,
-    NPCE_LocationReportingControl,
-    NPCE_LocationReportingFailureIndication,
-    NPCE_LocationReport,
-    NPCE_NASNonDeliveryIndication,
-    NPCE_NGReset,
-    NPCE_NGSetup,
-    NPCE_OverloadStart,
-    NPCE_OverloadStop,
-    NPCE_Paging,
-    NPCE_PathSwitchRequest,
-    NPCE_PDUSessionResourceModify,
-    NPCE_PDUSessionResourceModifyIndication,
-    NPCE_PDUSessionResourceRelease,
-    NPCE_PDUSessionResourceSetup,
-    NPCE_PDUSessionResourceNotify,
-    NPCE_PrivateMessage,
-    NPCE_PWSCancel,
-    NPCE_PWSFailureIndication,
-    NPCE_PWSRestartIndication,
-    NPCE_RANConfigurationUpdate,
-    NPCE_RerouteNASRequest,
-    NPCE_RRCInactiveTransitionReport,
-    NPCE_TraceFailureIndication,
-    NPCE_TraceStart,
-    NPCE_UEContextModification,
-    NPCE_UEContextRelease,
-    NPCE_UEContextReleaseRequest,
-    NPCE_UERadioCapabilityCheck,
-    NPCE_UERadioCapabilityInfoIndication,
-    NPCE_UETNLABindingRelease,
-    NPCE_UplinkNASTransport,
-    NPCE_UplinkNonUEAssociatedNRPPaTransport,
-    NPCE_UplinkRANConfigurationTransfer,
-    NPCE_UplinkRANStatusTransfer,
-    NPCE_UplinkUEAssociatedNRPPaTransport,
-    NPCE_WriteReplaceWarning,
-	NPCE_SecondaryRATDataUsageReport,
-	NPCE_UplinkRIMInformationTransfer,
-	NPCE_DownlinkRIMInformationTransfer,
-	NPCE_RetrieveUEInformation,
-	NPCE_UEInformationTransfer,
-	NPCE_RANCPRelocationIndication,
-	NPCE_UEContextResume,
-	NPCE_UEContextSuspend,
-	NPCE_UERadioCapabilityIDMapping,
-	NPCE_HandoverSuccess,
-	NPCE_UplinkRANEarlyStatusTransfer,
-	NPCE_DownlinkRANEarlyStatusTransfer,
-	NPCE_AMFCPRelocationIndication,
-	NPCE_ConnectionEstablishmentIndication,
-	NPCE_BroadcastSessionModification,
-	NPCE_BroadcastSessionRelease,
-	NPCE_BroadcastSessionSetup,
-	NPCE_DistributionSetup,
-	NPCE_DistributionRelease,
-	NPCE_MulticastSessionActivation,
-	NPCE_MulticastSessionDeactivation,
-	NPCE_MulticastSessionUpdate,
-	NPCE_MulticastGroupPaging,
-	NPCE_BroadcastSessionReleaseRequired,		/* 75 */
-	NPCE_NgapProcCodeUnknown
-} ngap_proc_code_t;
-
 typedef enum ngap_stat_type_t {
 	NGAP_STAT_RECV		= 0,
 	NGAP_STAT_SEND,
@@ -134,7 +55,7 @@ typedef enum ngap_stat_type_t {
 } ngap_stat_type_t;
 
 typedef struct ngap_op_count_t {
-	int count[NPTE_ngapPduTypeUnknown][NPCE_NgapProcCodeUnknown];
+	int count[NPTE_ngapPduTypeUnknown][NGAP_ProcCodeUnknown];
 } ngap_op_count_t;
 
 typedef struct ngap_stat_t {
@@ -205,6 +126,11 @@ typedef struct main_ctx_t {
 	int pdu_num;
 } main_ctx_t;
 
+/* ------------------------- stat.c --------------------------- */
+int     ngap_pdu_proc_code(NGAP_PDU *ngap_pdu);
+void    NGAP_STAT_COUNT(NGAP_PDU *ngap_pdu, ngap_stat_type_t stat_type);
+void    NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX);
+
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_ngap_send(int conn_fd, short events, void *data);
 json_object     *extract_distr_key(json_object *js_ngap_pdu, key_list_t *key_list);
@@ -227,8 +153,3 @@ int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_c
 int     initialize(main_ctx_t *MAIN_CTX);
 void    main_tick(int conn_fd, short events, void *data);
 int     main();
-
-/* ------------------------- stat.c --------------------------- */
-int     ngap_pdu_proc_code(NGAP_PDU *ngap_pdu);
-void    NGAP_STAT_COUNT(NGAP_PDU *ngap_pdu, ngap_stat_type_t stat_type);
-void    NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX);

@@ -1,13 +1,15 @@
 #include <nwucp.h>
 extern main_ctx_t *MAIN_CTX;
 
-void ngap_send_json(char *hostname, json_object *js_ngap)
+void ngap_send_json(char *hostname, ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
 {
 	ngap_msg_t msg = { .mtype = 1, }, *ngap_msg = &msg;
 	sprintf(ngap_msg->sctp_tag.hostname, "%s", hostname);
 	ngap_msg->sctp_tag.stream_id = 0;
 	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
-	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(js_ngap));
+	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(js_ngap_pdu));
+
+	NWUCP_TRACE(ue_ctx, DIR_ME_TO_AMF, js_ngap_pdu, NULL);
 
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
 	if (res < 0) {

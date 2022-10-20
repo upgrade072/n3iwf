@@ -24,11 +24,15 @@ SRCS5			= libudp.c
 OBJS5			= $(SRCS5:.c=.o)
 AOUT5			= libudp.a
 
+SRCS6			= libngapp.c
+OBJS6			= $(SRCS6:.c=.o)
+AOUT6			= libngapp.a
+
 DEST			= ../build
 CFLAG			= $(CFLAGS) -std=gnu99 -D_GNU_SOURCE -Wall -Wno-unused-function -g
 
 #---------------------------------------------------------------------
-all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) $(AOUT5) install
+all:: clean $(AOUT1) $(AOUT2) $(AOUT3) $(AOUT4) $(AOUT5) $(AOUT6) install
 
 .SUFFIXES: .c .o
 .c.o:
@@ -48,6 +52,9 @@ $(AOUT4): $(OBJS4)
 
 $(AOUT5): $(OBJS5)
 	$(AR) -rc $(AOUT5) $(OBJS5)
+
+$(AOUT6): $(OBJS6)
+	$(AR) -rc $(AOUT6) $(OBJS6)
 
 install:
 	\cp ./*.a   $(DEST)/lib

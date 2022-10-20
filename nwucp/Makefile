@@ -7,19 +7,22 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
 				  $(BUILD_LIBS_PATH)/libjson-c.a \
 				  $(BUILD_LIBS_PATH)/json_macro.a \
+				  $(BUILD_LIBS_PATH)/libngapp.a \
 				  $(BUILD_LIBS_PATH)/libevent_pthreads.a \
 				  $(BUILD_LIBS_PATH)/libevent.a \
 				  $(BUILD_LIBS_PATH)/libglib-1.3.a \
+				  ../PKG/MP/lib/libmsgtrc.a \
 				  ../PKG/MP/lib/libcomm.a \
 				  ../PKG/MP/lib/libmmc.a \
-				  ../PKG/MP/lib/libmsgtrc.a \
 				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c
+SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c trace.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN
-CFLAG			= $(CFLAGS) -D_GNU_SOURCE -Wall -Wno-unused-function -std=c99
+CPUFLAME_FLAG   = -fno-omit-frame-pointer
+TCMALLOC_FLAG   = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+CFLAG           = $(CFLAGS) -std=c99 -D_GNU_SOURCE -Wall -Wno-unused-function $(TCMALLOC_FLAG) $(CPUFLAME_FLAG)
 
 #---------------------------------------------------------------------
 all:: clean $(AOUT) install

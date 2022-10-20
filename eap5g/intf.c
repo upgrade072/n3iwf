@@ -58,68 +58,68 @@ const char *n3_msg_code_str(int msg_code)
 {   
     switch(msg_code) {
         case N3_MSG_UNSET:
-            return "n3_msg_unset";
+            return "N3_MSG_UNSET";
         case N3_IKE_AUTH_REQ:
-            return "ike_auth_req";
+            return "IKE_AUTH_REQ";
         case N3_IKE_AUTH_RES:
-            return "ike_auth_res";
+            return "IKE_AUTH_RES";
 		case N3_IKE_IPSEC_NOTI:
-			return "ike_ipsec_noti";
+			return "IKE_IPSEC_NOTI";
         case N3_IKE_INFORM_REQ:
-            return "ike_inform_req";
+            return "IKE_INFORM_REQ";
         case N3_IKE_INFORM_RES:
-            return "ike_inform_res";
+            return "IKE_INFORM_RES";
         case N3_CREATE_CHILD_SA_REQ:
-            return "create_child_sa_req";
+            return "CREATE_CHILD_SA_REQ";
         case N3_CREATE_CHILD_SA_RES:
-            return "create_child_sa_res";
+            return "CREATE_CHILD_SA_RES";
         default:
-            return "unknown";
+            return "UNKNOWN";
     }
 }
 const char *n3_res_code_str(int res_code)
 {   
     switch (res_code) {
         case N3_RES_UNSET:
-            return "n3_res_unset";
+            return "N3_RES_UNSET";
         case N3_EAP_INIT:
-            return "eap_init";
+            return "EAP_INIT";
         case N3_EAP_REQUEST:
-            return "eap_request";
+            return "EAP_REQUEST";
 		case N3_EAP_RESPONSE:
-            return "eap_response";
+            return "EAP_RESPONSE";
         case N3_EAP_SUCCESS:
-            return "eap_success";
+            return "EAP_SUCCESS";
         case N3_EAP_FAILURE:
-            return "eap_failure";
+            return "EAP_FAILURE";
 		case N3_IPSEC_CREATE_SUCCESS:
-			return "ipsec_create_success";
+			return "IPSEC_CREATE_SUCCESS";
 		case N3_IPSEC_CREATE_FAILURE:
-			return "ipsec_create_failure";
+			return "IPSEC_CREATE_FAILURE";
 		case N3_PDU_CREATE_REQUEST:
-			return "pdu_create_request";
+			return "PDU_CREATE_REQUEST";
 		case N3_PDU_CREATE_SUCCESS:
-			return "pdu_create_success";
+			return "PDU_CREATE_SUCCESS";
 		case N3_PDU_CREATE_FAILURE:
-			return "pdu_create_failure";
+			return "PDU_CREATE_FAILURE";
 		case N3_PDU_DELETE_REQUEST:
-			return "pdu_delete_request";
+			return "PDU_DELETE_REQUEST";
 		case N3_PDU_DELETE_SUCCESS:
-			return "pdu_delete_success";
+			return "PDU_DELETE_SUCCESS";
 		case N3_PDU_DELETE_FAILURE:
-			return "pdu_delete_failure";
+			return "PDU_DELETE_FAILURE";
 		case N3_PDU_UPDATE_REQUEST:
-			return "pdu_update_request";
+			return "PDU_UPDATE_REQUEST";
 		case N3_PDU_UPDATE_SUCCESS:
-			return "pdu_update_success";
+			return "PDU_UPDATE_SUCCESS";
 		case N3_PDU_UPDATE_FAILURE:
-			return "pdu_update_failure";
+			return "PDU_UPDATE_FAILURE";
 		case N3_IPSEC_DELETE_UE_CTX:
-			return "ipsec_delete_ue_ctx";
+			return "IPSEC_DELETE_UE_CTX";
 		case N3_IPSEC_UE_DISCONNECT:
-			return "ipsec_ue_disconnect";
+			return "IPSEC_UE_DISCONNECT";
         default:
-            return "unknown";
+            return "UNKNOWN";
     }
 }
 

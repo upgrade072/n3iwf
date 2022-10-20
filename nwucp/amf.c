@@ -36,7 +36,7 @@ void amf_regi(int conn_fd, short events, void *data)
 
 	fprintf(stderr, "%s() try [NGSetupRequest] to amf [%s]\n", __func__, amf_ctx->hostname);
 
-	ngap_send_json(amf_ctx->hostname, MAIN_CTX->js_ng_setup_request);
+	ngap_send_json(amf_ctx->hostname, NULL, MAIN_CTX->js_ng_setup_request);
 }
 
 void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
@@ -66,8 +66,10 @@ void amf_ctx_unset(amf_ctx_t *amf_ctx)
 	}
 }
 
-void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_ngap_pdu)
+void amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu)
 {
+	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
+
 	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
 
 	if (amf_ctx == NULL) {
@@ -86,8 +88,10 @@ void amf_regi_res_handle(sctp_tag_t *sctp_tag, bool success, json_object *js_nga
 	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
 }
 
-void amf_status_ind_handle(sctp_tag_t *sctp_tag, json_object *js_ngap_pdu)
+void amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
+	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
+
 	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
 
 	if (amf_ctx == NULL) {

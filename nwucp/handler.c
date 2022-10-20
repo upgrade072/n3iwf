@@ -87,7 +87,7 @@ void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 	ue_ctx_transit_state(ue_ctx, "N2 msg (Registration Request)");
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_initial_ue_message);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_initial_ue_message);
 
 	/* release resource */
 	json_object_put(js_initial_ue_message);
@@ -138,7 +138,7 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 	ue_ctx_transit_state(ue_ctx, "Initial Context Setup Res");
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_initial_context_setup_response_message);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_initial_context_setup_response_message);
 
 	/* release resource */
 	json_object_put(js_initial_context_setup_response_message);
@@ -159,7 +159,7 @@ void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t
 			"PDU Session Release Success" : "PDU Session Release Failure");
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_pdu_session_resouce_release_response);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_pdu_session_resouce_release_response);
 
 	/* release resource */
 	json_object_put(js_pdu_session_resouce_release_response);
@@ -187,7 +187,7 @@ void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *
 			"PDU Session Create Success" : "PDU Session Create Failure");
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_pdu_session_resouce_setup_response);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_pdu_session_resouce_setup_response);
 
 	/* release resource */
 	json_object_put(js_pdu_session_resouce_setup_response);
@@ -199,7 +199,7 @@ void ngap_proc_ue_context_release_request(ue_ctx_t *ue_ctx)
 		create_ue_context_release_request_json(ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, ue_ctx);
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_ue_context_release_request);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_ue_context_release_request);
 
 	/* release resource */
 	json_object_put(js_ue_context_release_request);
@@ -212,7 +212,7 @@ void ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx)
 				ue_ctx->ike_tag.ue_from_addr, ue_ctx->ike_tag.ue_from_port, ue_ctx);
 
 	/* send to amf */
-	ngap_send_json(ue_ctx->amf_tag.amf_host, js_ue_context_release_complete);
+	ngap_send_json(ue_ctx->amf_tag.amf_host, ue_ctx, js_ue_context_release_complete);
 
 	/* release resource */
 	json_object_put(js_ue_context_release_complete);
@@ -262,6 +262,21 @@ void nas_regi_to_amf(ike_msg_t *ike_msg)
 	ue_ctx_stop_timer(ue_ctx);
 
 	return ngap_proc_initial_context_setup_response(ue_ctx, ike_msg);
+}
+
+void ue_save_sctp_tag(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu, event_caller_t caller)
+{
+	ue_ctx_t *ue_ctx = NULL;
+
+	if (caller != EC_WORKER) {
+		return;
+	}
+	if ((ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX)) == NULL) {
+		return;
+	}
+	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
+	memcpy(&ue_ctx->sctp_tag, sctp_tag, sizeof(sctp_tag_t));
+	NWUCP_TRACE(ue_ctx, DIR_AMF_TO_ME, js_ngap_pdu, NULL);
 }
 
 void nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
@@ -321,7 +336,7 @@ void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
     if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto URRH_ERR;
-    }
+	}
     
     /* stop timer */
     ue_ctx_stop_timer(ue_ctx);
@@ -371,7 +386,7 @@ void ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
     if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto UPRR_ERR;
-    }
+	}
     
     /* stop timer */
     ue_ctx_stop_timer(ue_ctx);
@@ -420,8 +435,8 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
     if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto UPSH_ERR;
-    }
-    
+	}
+
     /* stop timer */
     ue_ctx_stop_timer(ue_ctx);
 
@@ -482,8 +497,8 @@ void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
     if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
         goto UCRH_ERR;
-    }
-    
+	}
+
     /* stop timer */
     ue_ctx_stop_timer(ue_ctx);
 

@@ -32,24 +32,12 @@ typedef struct {
 } TraceList;
 
 enum trace_node {
-	TRACE_NODE_MOBILE   = 1,
-	TRACE_NODE_EMGU     = 2,
-	TRACE_NODE_EMGC     = 3,
-	TRACE_NODE_NAS      = 4,
-	TRACE_NODE_BCSP     = 5,
-	TRACE_NODE_EMGPWD   = 6,
-	TRACE_NODE_EXTAAA	= 7
+	TRACE_NODE_NONE		= 0,
+	TRACE_NODE_UE		= 1,
+	TRACE_NODE_UP		= 2,
+	TRACE_NODE_CP		= 3,
+	TRACE_NODE_AMF      = 4,
 };
-
-enum en_trace_proto {
-	TRACE_PROTO_RADIUS  = 0,
-	TRACE_PROTO_SMPP    = 1,
-	TRACE_PROTO_NSTEP   = 2,
-	TRACE_PROTO_GTPP    = 3,
-	TRACE_PROTO_DIAM    = 4,
-	TRACE_PROTO_MAX     = 5
-};
-
  
 typedef struct {
     // unsigned int opCode; //해당 Trace Message의 Operation Code ( Req/Ack별도 정의 )

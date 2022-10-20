@@ -5,6 +5,7 @@ BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS      = $(BUILD_LIBS_PATH)/libconfig.a \
                   $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libngap.a \
+				  $(BUILD_LIBS_PATH)/libngapp.a \
 				  $(BUILD_LIBS_PATH)/libosstoed.a \
 				  $(BUILD_LIBS_PATH)/json_macro.a \
 				  $(BUILD_LIBS_PATH)/libjson-c.a \

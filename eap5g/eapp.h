@@ -113,7 +113,9 @@ const   char *n3_res_code_str(int res_code);
 const   char *eap5g_msg_id_str(int msg_id);
 
 /* ------------------------- trace.c --------------------------- */
-size_t  trace_ike_msg(char *body, ike_msg_t *ike_msg);
+void    IKE_TRACE(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg, int direction);
+int     TRACE_MAKE_MSG_HEAD(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg, int direction, TraceMsgHead *head, char *body);
+size_t  TRACE_MAKE_MSG_BODY(ike_msg_t *ike_msg, char *body);
 
 /* ------------------------- main.c --------------------------- */
 int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);

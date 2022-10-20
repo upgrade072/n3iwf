@@ -148,6 +148,9 @@ SRC_RETRY:
 			char nas_str[10240] = {0,};
 			nas->length = ntohs(nas->length);
 			mem_to_hex((unsigned char *)nas->message, nas->length, nas_str);
+
+			NWUCP_TRACE(ue_ctx, DIR_UE_TO_ME, NULL, nas_str);
+
 			ngap_send_uplink_nas(ue_ctx, nas_str);
 			memmove(sock_ctx->sock_buffer, &sock_ctx->sock_buffer[nas_size], sock_ctx->remain_size - nas_size);
 			sock_ctx->remain_size -= nas_size;
@@ -177,6 +180,9 @@ void sock_flush_cb(ue_ctx_t *ue_ctx)
 	nas_envelop_t *nas = (nas_envelop_t *)mem_buff;
 
 	while (ue_ctx->temp_cached_nas_message && ue_ctx->temp_cached_nas_message->data) {
+
+		NWUCP_TRACE(ue_ctx, DIR_ME_TO_UE, NULL, ue_ctx->temp_cached_nas_message->data);
+
 		size_t nas_len = 0;
 		hex_to_mem(ue_ctx->temp_cached_nas_message->data, nas->message, &nas_len);
 		nas->length = htons(nas_len);

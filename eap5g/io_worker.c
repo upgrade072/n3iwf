@@ -35,9 +35,7 @@ void handle_udp_request(int fd, short event, void *arg)
 
 	proc_udp_request(n3iwf_msg->msg_code, n3iwf_msg->res_code, n3iwf_msg, ike_msg);
 
-	char trace_buff[65535] = {0,};
-	trace_ike_msg(trace_buff, ike_msg);
-	fprintf(stderr, "RECV TRACE\n%s\n", trace_buff);
+	IKE_TRACE(n3iwf_msg, ike_msg, DIR_RECEIVE);
 
 HUR_END:
 	release_recv_buf(&MAIN_CTX->udp_buff, recv_buf);
@@ -61,9 +59,7 @@ void handle_ike_request(ike_msg_t *ike_msg)
 
 	proc_msg_request(n3iwf_msg->msg_code, n3iwf_msg->res_code, ike_msg, n3iwf_msg);
 
-	char trace_buff[65535] = {0,};
-	trace_ike_msg(trace_buff, ike_msg);
-	fprintf(stderr, "SEND TRACE\n%s\n", trace_buff);
+	IKE_TRACE(n3iwf_msg, ike_msg, DIR_SEND);
 
 	handle_pkg_htons(n3iwf_msg);
 

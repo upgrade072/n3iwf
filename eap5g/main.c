@@ -38,8 +38,16 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//  
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "EAP5G"); 
+	if (conflib_initConfigData() < 0) {
+		fprintf(stderr, "[%s.%d] conflib_initConfigData() Error\n", FL);
+		return -1;
+	}
 	if (keepalivelib_init(myAppName) < 0) {
 		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
+	if (msgtrclib_init() < 0) {
+		fprintf(stderr, "[%s.%d] msgtrclib_init() Error\n", FL);
 		return -1;
 	}
 	//  

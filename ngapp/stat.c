@@ -15,86 +15,6 @@ const char ngap_pdu_type_str[][128] = {
 	"ngapPduTypeUnknown",
 };
 
-const char ngap_pdu_code_str[][128] = {
-    "AMFConfigurationUpdate",
-    "AMFStatusIndication",
-    "CellTrafficTrace",
-    "DeactivateTrace",
-    "DownlinkNASTransport",
-    "DownlinkNonUEAssociatedNRPPaTransport",
-    "DownlinkRANConfigurationTransfer",
-    "DownlinkRANStatusTransfer",
-    "DownlinkUEAssociatedNRPPaTransport",
-    "ErrorIndication",
-    "HandoverCancel",
-    "HandoverNotification",
-    "HandoverPreparation",
-    "HandoverResourceAllocation",
-    "InitialContextSetup",
-    "InitialUEMessage",
-    "LocationReportingControl",
-    "LocationReportingFailureIndication",
-    "LocationReport",
-    "NASNonDeliveryIndication",
-    "NGReset",
-    "NGSetup",
-    "OverloadStart",
-    "OverloadStop",
-    "Paging",
-    "PathSwitchRequest",
-    "PDUSessionResourceModify",
-    "PDUSessionResourceModifyIndication",
-    "PDUSessionResourceRelease",
-    "PDUSessionResourceSetup",
-    "PDUSessionResourceNotify",
-    "PrivateMessage",
-    "PWSCancel",
-    "PWSFailureIndication",
-    "PWSRestartIndication",
-    "RANConfigurationUpdate",
-    "RerouteNASRequest",
-    "RRCInactiveTransitionReport",
-    "TraceFailureIndication",
-    "TraceStart",
-    "UEContextModification",
-    "UEContextRelease",
-    "UEContextReleaseRequest",
-    "UERadioCapabilityCheck",
-    "UERadioCapabilityInfoIndication",
-    "UETNLABindingRelease",
-    "UplinkNASTransport",
-    "UplinkNonUEAssociatedNRPPaTransport",
-    "UplinkRANConfigurationTransfer",
-    "UplinkRANStatusTransfer",
-    "UplinkUEAssociatedNRPPaTransport",
-    "WriteReplaceWarning",
-	"SecondaryRATDataUsageReport",
-	"UplinkRIMInformationTransfer",
-	"DownlinkRIMInformationTransfer",
-	"RetrieveUEInformation",
-	"UEInformationTransfer",
-	"RANCPRelocationIndication",
-	"UEContextResume",
-	"UEContextSuspend",
-	"UERadioCapabilityIDMapping",
-	"HandoverSuccess",
-	"UplinkRANEarlyStatusTransfer",
-	"DownlinkRANEarlyStatusTransfer",
-	"AMFCPRelocationIndication",
-	"ConnectionEstablishmentIndication",
-	"BroadcastSessionModification",
-	"BroadcastSessionRelease",
-	"BroadcastSessionSetup",
-	"DistributionSetup",
-	"DistributionRelease",
-	"MulticastSessionActivation",
-	"MulticastSessionDeactivation",
-	"MulticastSessionUpdate",
-	"MulticastGroupPaging",
-	"BroadcastSessionReleaseRequired",
-	"UnknownProcCode"
-};
-
 int ngap_pdu_proc_code(NGAP_PDU *ngap_pdu)
 {
 	int proc_num = 0;
@@ -115,7 +35,7 @@ int ngap_pdu_proc_code(NGAP_PDU *ngap_pdu)
 			break;
 	}
 
-	if (proc_num < 0 || proc_num >= NPCE_NgapProcCodeUnknown) {
+	if (proc_num < 0 || proc_num >= NGAP_ProcCodeUnknown) {
 		return -1;
 	} else {
 		return proc_num;
@@ -133,7 +53,7 @@ void NGAP_STAT_COUNT(NGAP_PDU *ngap_pdu, ngap_stat_type_t stat_type)
 
 	if (ngap_pdu == NULL) {
 		/* en/decoding error count */
-		op_count->count[NPTE_ngapPduTypeUnused][NPCE_NgapProcCodeUnknown]++;
+		op_count->count[NPTE_ngapPduTypeUnused][NGAP_ProcCodeUnknown]++;
 	} else {
 		int proc_num = ngap_pdu_proc_code(ngap_pdu);
 		if (proc_num > 0) {
@@ -141,7 +61,7 @@ void NGAP_STAT_COUNT(NGAP_PDU *ngap_pdu, ngap_stat_type_t stat_type)
 			op_count->count[ngap_pdu->choice][proc_num]++;
 		} else {
 			/* incorrect proc num */
-			op_count->count[ngap_pdu->choice][NPCE_NgapProcCodeUnknown]++;
+			op_count->count[ngap_pdu->choice][NGAP_ProcCodeUnknown]++;
 		}
 	}
 }
@@ -158,7 +78,7 @@ void NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX)
 
 		for (int stat = 0; stat < NGAP_STAT_NUM; stat++) {
 			for (int type = 0; type < NPTE_ngapPduTypeUnknown; type++) {
-				for (int proc = 0; proc < NPCE_NgapProcCodeUnknown; proc++) {
+				for (int proc = 0; proc < NGAP_ProcCodeUnknown; proc++) {
 					STAT[stat].count[type][proc] += stat_worker->stat[CUR_POS][stat].count[type][proc];
 					stat_worker->stat[CUR_POS][stat].count[type][proc] = 0;
 				}
@@ -170,7 +90,7 @@ void NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX)
 		int stat_print = 0;
 		for (int type = 0; type < NPTE_ngapPduTypeUnknown; type++) {
 			int type_print = 0;
-			for (int proc = 0; proc < NPCE_NgapProcCodeUnknown; proc++) {
+			for (int proc = 0; proc < NGAP_ProcCodeUnknown; proc++) {
 				if (STAT[stat].count[type][proc] != 0) {
 					if (stat_print == 0) {
 						fprintf(stderr, "=== %s ===\n", ngap_stat_type_str[stat]);
@@ -180,7 +100,7 @@ void NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX)
 						fprintf(stderr, "[%s]\n", ngap_pdu_type_str[type]);
 						type_print = 1;
 					}
-					fprintf(stderr, "  %s : %d\n", ngap_pdu_code_str[proc], STAT[stat].count[type][proc]);
+					fprintf(stderr, "  %s : %d\n", NGAP_PROC_C_STR(proc), STAT[stat].count[type][proc]);
 				}
 			}
 		}

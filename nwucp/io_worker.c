@@ -3,8 +3,10 @@
 extern main_ctx_t *MAIN_CTX;
 __thread worker_ctx_t *WORKER_CTX;
 
-void handle_ngap_log(const char *prefix, sctp_tag_t *sctp_tag, event_caller_t caller)
+void handle_ngap_log(const char *prefix, ngap_msg_t *ngap_msg, event_caller_t caller)
 {
+	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
+
 	fprintf(stderr, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
 			prefix,
 			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid, 
@@ -13,8 +15,6 @@ void handle_ngap_log(const char *prefix, sctp_tag_t *sctp_tag, event_caller_t ca
 
 void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 {
-	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
-
 	/* caution! must put this object */
 	json_object *js_ngap_pdu = json_tokener_parse(ngap_msg->msg_body);
 
@@ -24,34 +24,34 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 	int proc_code = json_object_get_int(search_json_object_ex(js_ngap_pdu, "/*/procedureCode", key_list));
 	int success = !strcmp(key_list->key_val[0], "successfulOutcome") ? true : false;
 
+	handle_ngap_log(NGAP_PROC_C_STR(proc_code), ngap_msg, caller);
+
+	/* save sctp_tag to ue_ctx & TRACE */
+	ue_save_sctp_tag(ngap_msg, js_ngap_pdu, caller);
+
 	switch (proc_code) 
 	{
-		case AMFStatusIndication:
-			handle_ngap_log("AMFStatusIndication", sctp_tag, caller);
-			amf_status_ind_handle(sctp_tag, js_ngap_pdu);
+		/* AMF MESSAGE (HANDLE BY MAIN) */
+		case NGAP_AMFStatusIndication:
+			amf_status_ind_handle(ngap_msg, js_ngap_pdu);
 			break;
-		case NGSetupResponse:
-			handle_ngap_log("NGSetupResponse", sctp_tag, caller);
-			amf_regi_res_handle(sctp_tag, success, js_ngap_pdu);
+		case NGAP_NGSetup:
+			amf_regi_res_handle(ngap_msg, success, js_ngap_pdu);
 			break;
-		case DownlinkNASTransport:
-			handle_ngap_log("DownlinkNASTransport", sctp_tag, caller);
+		/* UE MESSAGE (HANDLE BY WORKER) */
+		case NGAP_DownlinkNASTransport:
 			nas_relay_to_ue(ngap_msg, js_ngap_pdu);
 			break;
-		case InitialContextSetupRequest:
-			handle_ngap_log("InitialContextSetupRequest", sctp_tag, caller);
+		case NGAP_InitialContextSetup:
 			ue_regi_res_handle(ngap_msg, js_ngap_pdu);
 			break;
-		case PDUSessionResourceReleaseRequest:
-			handle_ngap_log("PDUSessionResourceReleaseRequest", sctp_tag, caller);
+		case NGAP_PDUSessionResourceRelease:
 			ue_pdu_release_req_handle(ngap_msg, js_ngap_pdu);
 			break;
-		case PDUSessionResourceSetupRequest:
-			handle_ngap_log("PDUSessionResourceSetupRequest", sctp_tag, caller);
+		case NGAP_PDUSessionResourceSetup:
 			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
 			break;
-		case UEContextReleaseCommand:
-			handle_ngap_log("UEContextReleaseCommand", sctp_tag, caller);
+		case NGAP_UEContextRelease:
 			ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
 			break;
 		default:
