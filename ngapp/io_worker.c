@@ -17,7 +17,7 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	OssBuf json_buf = { .length = (long)ngap_msg->msg_size, .value = (unsigned char *)ngap_msg->msg_body };
 	NGAP_PDU *ngap_pdu = NULL;
 	if (ossDecode(world, &PDU_NUM, &json_buf, (void **)&ngap_pdu) != 0) {
-		fprintf(stderr, "%s() fail to decode [json -> pdu] !\n", __func__);
+		ERRLOG(LLE, FL, "%s() fail to decode [json -> pdu] !\n", __func__);
 		ossPrint(world, "%s\n", ossGetErrMsg(world));
 		goto HNS_END;
 	}
@@ -25,14 +25,14 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	/* print pdu */
 	OssBuf outputData = { .length = 0, .value = NULL };
 	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
-	fprintf(stderr, "Send %s", outputData.value);
+	ERRLOG(LLE, FL, "Send %s", outputData.value);
 	ossFreeBuf(world, outputData.value);
 
 	/* encode pdu - (to APER) */
 	ossSetEncodingRules(world, OSS_PER_ALIGNED);
 	OssBuf pdu_buf = { .length = 0, .value = NULL };
 	if (ossEncode(world, PDU_NUM, ngap_pdu, &pdu_buf) != 0) {
-		fprintf(stderr, "%s() fail to encode [pdu -> ngap] !\n", __func__);
+		ERRLOG(LLE, FL, "%s() fail to encode [pdu -> ngap] !\n", __func__);
 		ossPrint(world, "%s\n", ossGetErrMsg(world));
 		goto HNS_END;
 	}
@@ -42,7 +42,7 @@ void handle_ngap_send(int conn_fd, short events, void *data)
 	memcpy(&send_msg.msg_body, pdu_buf.value, pdu_buf.length);
 	send_msg.msg_size = pdu_buf.length;
 	int res = msgsnd(MAIN_CTX->QID_INFO.ngapp_sctpc_qid, &send_msg, SCTP_MSG_SIZE(&send_msg), IPC_NOWAIT);
-	fprintf(stderr, "{dbg} send_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", SCTP_MSG_SIZE(&send_msg), errno, strerror(errno));
+	ERRLOG(LLE, FL, "{dbg} send_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", SCTP_MSG_SIZE(&send_msg), errno, strerror(errno));
 
 HNS_END:
 	NGAP_STAT_COUNT(ngap_pdu, 0);
@@ -82,7 +82,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	OssBuf ngap_buf = { .length = (long)sctp_msg->msg_size, .value = (unsigned char *)sctp_msg->msg_body };
 	NGAP_PDU *ngap_pdu = NULL;
 	if (ossDecode(world, &PDU_NUM, &ngap_buf, (void **)&ngap_pdu) != 0) {
-		fprintf(stderr, "%s() fail to decode [ngap -> pdu] !\n", __func__);
+		ERRLOG(LLE, FL, "%s() fail to decode [ngap -> pdu] !\n", __func__);
 		ossPrint(world, "%s\n", ossGetErrMsg(world));
 		goto HNR_END;
 	}
@@ -90,7 +90,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	/* print pdu */
 	OssBuf outputData = { .length = 0, .value = NULL };
 	ossPrintPDUToBuffer(world, PDU_NUM, ngap_pdu, &outputData);
-	fprintf(stderr, "Recv %s", outputData.value);
+	ERRLOG(LLE, FL, "Recv %s", outputData.value);
 	ossFreeBuf(world, outputData.value);
 
 	/* encode pdu - (to JER) */
@@ -98,7 +98,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	ossSetJsonFlags(world, ossGetJsonFlags(world) | JSON_ENC_CONTAINED_AS_TEXT | JSON_COMPACT_ENCODING);
 	OssBuf json_buf = { .length = 0, .value = NULL };
 	if (ossEncode(world, PDU_NUM, ngap_pdu, &json_buf) != 0) {
-		fprintf(stderr, "%s() fail to encode [pdu -> json] !\n", __func__);
+		ERRLOG(LLE, FL, "%s() fail to encode [pdu -> json] !\n", __func__);
 		ossPrint(world, "%s\n", ossGetErrMsg(world));
 		goto HNR_END;
 	}
@@ -120,7 +120,7 @@ void handle_ngap_recv(int conn_fd, short events, void *data)
 	recv_msg.msg_size = sprintf(recv_msg.msg_body, "%s", json_buf.value);
 
 	int res = msgsnd(qid, &recv_msg, NGAP_MSG_SIZE(&recv_msg), IPC_NOWAIT);
-	fprintf(stderr, "{dbg} recv_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", NGAP_MSG_SIZE(&recv_msg), errno, strerror(errno));
+	ERRLOG(LLE, FL, "{dbg} recv_relay res=[%s] size=(%ld) (%d:%s)\n", res == 0 ? "success" : "fail", NGAP_MSG_SIZE(&recv_msg), errno, strerror(errno));
 
 HNR_END:
 	NGAP_STAT_COUNT(ngap_pdu, 1);
@@ -143,7 +143,7 @@ void *io_worker_thread(void *arg)
 	/* prepare asn1 context per thread */
 	int res = ossDupWorld(&MAIN_CTX->world, &w);
 	if (res != 0) {
-		fprintf(stderr, "{dbg} fail to prepare asn1 ctx at io_worker! = (%d)\n", res);
+		ERRLOG(LLE, FL, "{dbg} fail to prepare asn1 ctx at io_worker! = (%d)\n", res);
 		exit(0);
 	} else {
 		world = &w;

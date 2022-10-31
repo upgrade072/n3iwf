@@ -55,7 +55,7 @@ int handle_sctp_notification(union sctp_notification *notif, size_t notif_len, c
 {
 	int notif_header_size = sizeof(((union sctp_notification *)NULL)->sn_header);
 	if (notif_len < notif_header_size) {
-		fprintf(stderr, "%s() recv invalid sctp noti!\n", __func__);
+		ERRLOG(LLE, FL, "%s() recv invalid sctp noti!\n", __func__);
 		return (-1);
 	}
 
@@ -153,7 +153,7 @@ int get_assoc_stats_diff(int sd, int assoc_id, sctp_stat_t *count)
     
     if (getsockopt(sd, SOL_SCTP, SCTP_GET_ASSOC_STATS, (char *)&stats, &len) != 0) {
 		/* it means not connected */
-        //fprintf(stderr, "%s() failed %s\n", __func__, strerror(errno));
+        //ERRLOG(LLE, FL, "%s() failed %s\n", __func__, strerror(errno));
         return -1;
     }
 

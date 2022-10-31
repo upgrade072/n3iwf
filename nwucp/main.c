@@ -13,8 +13,8 @@ int load_config(config_t *CFG)
 	char tmp_path[1024] = {0,};
 	sprintf(tmp_path, "%s/data/N3IWF_CONFIG/nwucp.cfg", getenv("IV_HOME"));
     if (!config_read_file(CFG, tmp_path)) {
-        fprintf(stderr, "cfg err!\n");
-        fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
+        ERRLOG(LLE, FL, "cfg err!\n");
+        ERRLOG(LLE, FL, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
                 __func__,
                 config_error_file(CFG),
                 config_error_line(CFG),
@@ -44,7 +44,7 @@ int create_n3iwf_profile(main_ctx_t *MAIN_CTX)
     /* OK we get ngap_setup_request JSON PDU */
     MAIN_CTX->js_ng_setup_request = create_ng_setup_request_json(mcc_mnc, n3iwf_id, node_name, js_support_ta_item);
 
-    fprintf(stderr, "%s() create message\n%s\n", __func__, JS_PRINT_PRETTY(MAIN_CTX->js_ng_setup_request));
+    ERRLOG(LLE, FL, "%s() create message\n%s\n", __func__, JS_PRINT_PRETTY(MAIN_CTX->js_ng_setup_request));
 
 	json_object_put(json_cfg);
 
@@ -100,7 +100,7 @@ int create_tcp_server(main_ctx_t *MAIN_CTX)
 			16, (struct sockaddr*)&tcp_server->listen_addr, sizeof(tcp_server->listen_addr));
 
 	if (tcp_server->listener == NULL) {
-		fprintf(stderr, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->tcp_listen_port);
+		ERRLOG(LLE, FL, "%s() fail to create tcp_server (any:%d)!\n", __func__, tcp_server->tcp_listen_port);
 		return (-1);
 	}
 
@@ -110,7 +110,7 @@ int create_tcp_server(main_ctx_t *MAIN_CTX)
 int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX)
 {
     if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
-        fprintf(stderr, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
+        ERRLOG(LLE, FL, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
         return (-1);
     }
 
@@ -122,7 +122,7 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
         sprintf(worker_ctx->thread_name, "%s_%02d", prefix, i);
 
         if (pthread_create(&worker_ctx->pthread_id, NULL, io_worker_thread, worker_ctx)) {
-            fprintf(stderr, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
+            ERRLOG(LLE, FL, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
             return (-1);
         }
 
@@ -137,26 +137,6 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "NWUCP");
-	if (conflib_initConfigData() < 0) {
-		fprintf(stderr, "[%s.%d] conflib_initConfigData() Error\n", FL);
-		return -1;
-	}
-	if (keepalivelib_init(myAppName) < 0) {
-		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
-		return -1;
-	}
-	if (msgtrclib_init() < 0) {
-		fprintf(stderr, "[%s.%d] msgtrclib_init() Error\n", FL);
-		return -1;
-	}
-	if (pthread_mutex_init(&MAIN_CTX->mutex_for_ovldctrl, NULL) != 0) {
-		fprintf(stderr, "[%s.%d] pthread_mutex_init() Error\n", FL);
-		return -1;
-	}
-	if (ovldlib_init(myAppName) < 0) {
-		fprintf(stderr, "[%s.%d] ovldlib_init() Error\n", FL);
-		return -1;
-	}
 	// 
 	initLog(myAppName);
 	// start with Log Level Error 
@@ -167,6 +147,27 @@ int initialize(main_ctx_t *MAIN_CTX)
 	ERRLOG(LLE, FL, "Welcome ---------------\n");
 	TRCLOG(LLE, FL, "Welcome ---------------\n");
 	MSGLOG(LLE, FL, "Welcome ---------------\n");
+
+	if (conflib_initConfigData() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] conflib_initConfigData() Error\n", FL);
+		return -1;
+	}
+	if (keepalivelib_init(myAppName) < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
+	if (msgtrclib_init() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] msgtrclib_init() Error\n", FL);
+		return -1;
+	}
+	if (pthread_mutex_init(&MAIN_CTX->mutex_for_ovldctrl, NULL) != 0) {
+		ERRLOG(LLE, FL, "[%s.%d] pthread_mutex_init() Error\n", FL);
+		return -1;
+	}
+	if (ovldlib_init(myAppName) < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] ovldlib_init() Error\n", FL);
+		return -1;
+	}
 
 	if ((load_config(&MAIN_CTX->CFG)	< 0) || 
 		(create_n3iwf_profile(MAIN_CTX) < 0) ||
@@ -205,7 +206,7 @@ int main()
     MAIN_CTX->evbase_main = event_base_new();
 
 	if (initialize(MAIN_CTX) < 0) {
-		fprintf(stderr, "%s fail to initialize()!\n", __func__);
+		ERRLOG(LLE, FL, "%s fail to initialize()!\n", __func__);
 		exit(0);
 	}
 

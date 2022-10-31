@@ -44,7 +44,7 @@ void eap_send_eap_request(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu)
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 	}
 }
 
@@ -86,7 +86,7 @@ void eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 	}
 }
 
@@ -114,7 +114,7 @@ void ike_send_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 	}
 }
 
@@ -142,7 +142,7 @@ void ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info)
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 	}
 }
 
@@ -167,7 +167,7 @@ void ike_send_ue_release(ue_ctx_t *ue_ctx)
 	/* send message to EAP5G */
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_eap5g_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 	}
 }
 
@@ -212,7 +212,7 @@ void tcp_send_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)
 	if (ue_ctx->sock_ctx != NULL) {
 		sock_flush_cb(ue_ctx);
 	} else {
-		fprintf(stderr, "%s() ue [%s] save temp_cache_nas_message\n", __func__, UE_TAG(ue_ctx));
+		ERRLOG(LLE, FL, "%s() ue [%s] save temp_cache_nas_message\n", __func__, UE_TAG(ue_ctx));
 	}
 }
 

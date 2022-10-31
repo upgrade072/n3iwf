@@ -7,7 +7,7 @@ void handle_ngap_log(const char *prefix, ngap_msg_t *ngap_msg, event_caller_t ca
 {
 	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
 
-	fprintf(stderr, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
+	ERRLOG(LLE, FL, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
 			prefix,
 			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid, 
 			caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
@@ -62,7 +62,7 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 			break;
 		default:
 			/* we can't handle, just discard */
-			fprintf(stderr, "%s() recv [Unknown NGAP Message=(%d)!] with (%s)\n%s\n", 
+			ERRLOG(LLE, FL, "%s() recv [Unknown NGAP Message=(%d)!] with (%s)\n%s\n", 
 					__func__, proc_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name, JS_PRINT_PRETTY(js_ngap_pdu));
 			break;
 	}
@@ -77,7 +77,7 @@ HNM_DISCARD:
 
 void handle_ike_log(const char *prefix, ike_msg_t *ike_msg, event_caller_t caller)
 {
-	fprintf(stderr, "\nike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s] with (%s)\n",
+	ERRLOG(LLE, FL, "\nike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s] with (%s)\n",
 			prefix,
 			ike_msg->ike_tag.ue_from_addr,
 			ike_msg->ike_tag.ue_from_port,
@@ -133,7 +133,7 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 			break;
 		default:
 			/* we can't handle, just discard */
-			fprintf(stderr, "%s() recv [Unknown IKE Message=(%d)!] with (%s)\n", 
+			ERRLOG(LLE, FL, "%s() recv [Unknown IKE Message=(%d)!] with (%s)\n", 
 					__func__, n3iwf_msg->msg_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
 			break;
 	}
@@ -154,7 +154,7 @@ void msg_rcv_from_ngapp(int conn_fd, short events, void *data)
 			ev_caller == EC_MAIN ? 0 : WORKER_CTX->thread_index + 1,
 			IPC_NOWAIT) > 0) {
 
-		//fprintf(stderr, "%s() [%s:%s] recv from msgq\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
+		//ERRLOG(LLE, FL, "%s() [%s:%s] recv from msgq\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
 
 		handle_ngap_msg(ngap_msg, ev_caller);
 	}
@@ -173,7 +173,7 @@ void msg_rcv_from_eap5g(int conn_fd, short events, void *data)
 			ev_caller == EC_MAIN ? 0 : WORKER_CTX->thread_index + 1,
 			IPC_NOWAIT) > 0) {
 
-		//fprintf(stderr, "%s() [%s:%s] recv from msgq\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
+		//ERRLOG(LLE, FL, "%s() [%s:%s] recv from msgq\n", __func__, caller, strcmp(caller, "main") ? WORKER_CTX->thread_name : "");
 
 		handle_ike_msg(ike_msg, ev_caller);
 	}

@@ -54,7 +54,7 @@ void bf_msgq_read(int fd, short events, void *data)
         /* find empty slot */
         recv_buf_t *buffer = find_empty_recv_buffer(worker_ctx);
         if (buffer == NULL) {
-			fprintf(stderr, "{dbg} oops (%s) thrd=[%s] can't find emtpy slot!\n", __func__, worker_ctx->thread_name);
+			ERRLOG(LLE, FL, "{dbg} oops (%s) thrd=[%s] can't find emtpy slot!\n", __func__, worker_ctx->thread_name);
 			return;
 		}
 

@@ -56,7 +56,7 @@ void sock_write(int conn_fd, short events, void *data)
 				buffer->occupied = 0;
 			} else {
 				if (errno != EAGAIN) {
-					fprintf(stderr, "{dbg} %s() error occured (%d:%s)\n", __func__, errno, strerror(errno));
+					ERRLOG(LLE, FL, "{dbg} %s() error occured (%d:%s)\n", __func__, errno, strerror(errno));
 				}
 				return;
 			}
@@ -99,7 +99,7 @@ void relay_msg_to_ppid(sctp_msg_t *send_msg)
 		ppid_pqid_t *pqid = MAIN_CTX->QID_INFO.sctp_recv_relay;
 		if (pqid->sctp_ppid == send_msg->tag.ppid) {
 			msgsnd(pqid->proc_pqid, send_msg, SCTP_MSG_SIZE(send_msg), IPC_NOWAIT);
-			fprintf(stderr, "{dbg} %s send to msg to proc\n", __func__);
+			ERRLOG(LLE, FL, "{dbg} %s send to msg to proc\n", __func__);
 			return;
 		}
 	}
@@ -126,12 +126,12 @@ RECV_MORE:
 		/* Additional Info */
 		const char *sctp_state = NULL;
 		conn_status->assoc_state = get_assoc_state(conn_status->conns_fd, conn_status->assoc_id, &sctp_state);
-		fprintf(stderr, "%s() update assoc(%d) state=[%d:%s]\n", __func__, conn_status->assoc_id, conn_status->assoc_state, sctp_state);
+		ERRLOG(LLE, FL, "%s() update assoc(%d) state=[%d:%s]\n", __func__, conn_status->assoc_id, conn_status->assoc_state, sctp_state);
 
 		/* Maybe restart conn */
 		const char *event_str = NULL, *event_state = NULL;
 		int ret = handle_sctp_notification((union sctp_notification *)buffer, recv_bytes, &event_str, &event_state);
-		fprintf(stderr, "%s() recv event=[%s(%s)] ret=(%d)\n", __func__, event_str, event_state, ret);
+		ERRLOG(LLE, FL, "%s() recv event=[%s(%s)] ret=(%d)\n", __func__, event_str, event_state, ret);
 		if (ret < 0) { 
 			conn_status->assoc_state = -1;
 			return;
@@ -153,14 +153,14 @@ RECV_MORE:
 	} else if (recv_bytes < 0 && errno != EAGAIN) {
 
 		/* handle error */
-		fprintf(stderr, "error occured! (%d:%s)\n", errno, strerror(errno));
+		ERRLOG(LLE, FL, "error occured! (%d:%s)\n", errno, strerror(errno));
 		conn_status->assoc_state = -1;
 	}
 }
 
 void clear_connection(conn_status_t *conn_status)
 {
-	fprintf(stderr, "{dbg} %s() called!\n", __func__);
+	ERRLOG(LLE, FL, "{dbg} %s() called!\n", __func__);
 
 	/* clear resource */
 	if (!TAILQ_EMPTY(&conn_status->queue_head)) {
@@ -215,11 +215,11 @@ void check_path_state(sctp_client_t *client)
 
 			int ret = sctp_opt_info(conn->conns_fd, conn->assoc_id, SCTP_GET_PEER_ADDR_INFO, &pinfo, &optlen);
 			if (ret < 0) {
-				//fprintf(stderr, "fail to get paddr\n"); // path goaway
+				//ERRLOG(LLE, FL, "fail to get paddr\n"); // path goaway
 			} else {
 				getnameinfo((struct sockaddr *)&pinfo.spinfo_address, sizeof(struct sockaddr_storage), 
 						peer_host, sizeof(peer_host), peer_port, sizeof(peer_port), NI_NUMERICHOST | NI_NUMERICSERV);
-				fprintf(stderr, "{dbg} %s:%s path_state=(%d:%s)\n", peer_host, peer_port, pinfo.spinfo_state, get_path_state_str(pinfo.spinfo_state));
+				ERRLOG(LLE, FL, "{dbg} %s:%s path_state=(%d:%s)\n", peer_host, peer_port, pinfo.spinfo_state, get_path_state_str(pinfo.spinfo_state));
 			}
 		}
 	}

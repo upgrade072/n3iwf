@@ -55,7 +55,7 @@ void disp_conn_list(main_ctx_t *MAIN_CTX)
 		ft_destroy_table(assoc_table);
 	}
 	ft_add_separator(table);
-	fprintf(stderr, "%s\n", ft_to_string(table));
+	ERRLOG(LLE, FL, "\n%s\n", ft_to_string(table));
 	ft_destroy_table(table);
 }
 
@@ -109,16 +109,16 @@ void init_conn_list(main_ctx_t *MAIN_CTX)
 
 		/* check value */
 		if (id < 0 || id >= MAX_SC_CONN_LIST) {
-			fprintf(stderr, "%s() check invalid id=(%d)\n", __func__, id);
+			ERRLOG(LLE, FL, "%s() check invalid id=(%d)\n", __func__, id);
 			continue;
 		} else if (CURR_CONN->conn_info[id].occupied == 1) {
-			fprintf(stderr, "%s() check duplicated id=(%d)\n", __func__, id);
+			ERRLOG(LLE, FL, "%s() check duplicated id=(%d)\n", __func__, id);
 			continue;
 		} else if (strlen(name) == 0 || strlen(name) >= 128) {
-			fprintf(stderr, "%s() check invalid name_len(%ld) id=(%d)\n", __func__, strlen(name), id);
+			ERRLOG(LLE, FL, "%s() check invalid name_len(%ld) id=(%d)\n", __func__, strlen(name), id);
 			continue;
 		} else if (conn_num < 0 || conn_num >= MAX_SC_CONN_NUM) {
-			fprintf(stderr, "%s() check invalid conn_num(%d) id=(%d)\n", __func__, conn_num, id);
+			ERRLOG(LLE, FL, "%s() check invalid conn_num(%d) id=(%d)\n", __func__, conn_num, id);
 			continue;
 		}
 
@@ -177,7 +177,7 @@ void disp_conn_stat(main_ctx_t *MAIN_CTX)
 
 			struct sctp_stat_t *sctp_stat = link_node_get_data_by_key(&MAIN_CTX->sctp_stat_list, temp_key);
 			if (sctp_stat == NULL) {
-				fprintf(stderr, "{dbg} create new sctp stat for [%s]\n", temp_key);
+				ERRLOG(LLE, FL, "{dbg} create new sctp stat for [%s]\n", temp_key);
 				link_node *node = link_node_assign_key_order(&MAIN_CTX->sctp_stat_list, temp_key, sizeof(sctp_stat_t));
 				sctp_stat = (sctp_stat_t *)node->data;
 			}

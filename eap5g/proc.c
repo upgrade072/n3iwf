@@ -9,7 +9,7 @@ void proc_eap_init(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 	sprintf(ike_msg->ike_tag.ue_from_addr, "%s", eap_init->ue_from_addr);
 	ike_msg->ike_tag.ue_from_port = ntohs(eap_init->ue_from_port);
 
-	fprintf(stderr, "{DBG} %s() recv from ue (%s:%d)\n", __func__, ike_msg->ike_tag.ue_from_addr, ike_msg->ike_tag.ue_from_port);
+	ERRLOG(LLE, FL, "{DBG} %s() recv from ue (%s:%d)\n", __func__, ike_msg->ike_tag.ue_from_addr, ike_msg->ike_tag.ue_from_port);
 
 	msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
 }
@@ -55,7 +55,7 @@ void proc_inform_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 			n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
 			pdu_sess->pdu_sess_ambr_dl = ntohl(pdu_sess->pdu_sess_ambr_dl);
 			pdu_sess->pdu_sess_ambr_ul = ntohl(pdu_sess->pdu_sess_ambr_ul);
-			fprintf(stderr, "{DBG} %s() recv (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+			ERRLOG(LLE, FL, "{DBG} %s() recv (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
 					pdu_sess->session_id,
 					pdu_sess->pdu_sess_ambr_dl,
 					pdu_sess->pdu_sess_ambr_ul,
@@ -87,7 +87,7 @@ void proc_inform_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 
 	for (int i = 0; i < pdu_info->pdu_num; i++) {
 		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
-		fprintf(stderr, "{DBG} %s() send (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+		ERRLOG(LLE, FL, "{DBG} %s() send (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
 				pdu_sess->session_id,
 				pdu_sess->pdu_sess_ambr_dl,
 				pdu_sess->pdu_sess_ambr_ul,
@@ -108,7 +108,7 @@ void proc_pdu_request(ike_msg_t *ike_msg, n3iwf_msg_t *n3iwf_msg)
 
 	for (int i = 0; i < pdu_info->pdu_num; i++) {
 		n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
-		fprintf(stderr, "{DBG} %s() send (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+		ERRLOG(LLE, FL, "{DBG} %s() send (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
 				pdu_sess->session_id,
 				pdu_sess->pdu_sess_ambr_dl,
 				pdu_sess->pdu_sess_ambr_ul,
@@ -134,7 +134,7 @@ void proc_pdu_response(n3iwf_msg_t *n3iwf_msg, ike_msg_t *ike_msg)
 			n3_pdu_sess_t *pdu_sess = &pdu_info->pdu_sessions[i];
 			pdu_sess->pdu_sess_ambr_dl = ntohl(pdu_sess->pdu_sess_ambr_dl);
 			pdu_sess->pdu_sess_ambr_ul = ntohl(pdu_sess->pdu_sess_ambr_ul);
-			fprintf(stderr, "{DBG} %s() recv (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
+			ERRLOG(LLE, FL, "{DBG} %s() recv (%d) (%d) (%d) (%s) (%s) (%d)\n", __func__,
 					pdu_sess->session_id,
 					pdu_sess->pdu_sess_ambr_dl,
 					pdu_sess->pdu_sess_ambr_ul,

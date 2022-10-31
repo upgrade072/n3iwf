@@ -13,7 +13,7 @@ void ngap_send_json(char *hostname, ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
 
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
 	if (res < 0) {
-		fprintf(stderr, "%s() error! (%d:%s)\n", __func__, errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() error! (%d:%s)\n", __func__, errno, strerror(errno));
 	}
 }
 

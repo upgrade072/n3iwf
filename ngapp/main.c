@@ -11,7 +11,7 @@ int create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX)
     config_lookup_int(&MAIN_CTX->CFG, "process_config.queue_count_at_bf", &worker_ctx->recv_buff.total_num);
     if ((worker_ctx->recv_buff.each_size <= 0 || worker_ctx->recv_buff.each_size > MAX_DISTR_BUFF_SIZE) ||
         (worker_ctx->recv_buff.total_num <= 0 || worker_ctx->recv_buff.total_num > MAX_DISTR_BUFF_NUM)) {
-        fprintf(stderr, "%s() fatal! process_config.queue_size_at_bf=(%d/max=%d) process_config.queue_count_at_bf=(%d/max=%d)!\n",
+        ERRLOG(LLE, FL, "%s() fatal! process_config.queue_size_at_bf=(%d/max=%d) process_config.queue_count_at_bf=(%d/max=%d)!\n",
                 __func__,
                 worker_ctx->recv_buff.each_size, MAX_DISTR_BUFF_SIZE,
                 worker_ctx->recv_buff.total_num, MAX_DISTR_BUFF_NUM);
@@ -38,11 +38,11 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
         bf_worker = 1;
     }
     if (!io_worker && !bf_worker) {
-        fprintf(stderr, "%s() fatal! recv unhandle worker request=[%s]\n", __func__, prefix);
+        ERRLOG(LLE, FL, "%s() fatal! recv unhandle worker request=[%s]\n", __func__, prefix);
         return (-1);
     }
     if (WORKER->worker_num <= 0 || WORKER->worker_num > MAX_WORKER_NUM) {
-        fprintf(stderr, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
+        ERRLOG(LLE, FL, "%s() fatal! [%s] worker_num=(%d/max=%d)!\n", __func__, prefix, WORKER->worker_num, MAX_WORKER_NUM);
         return (-1);
     }
 
@@ -54,19 +54,19 @@ int create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t
         sprintf(worker_ctx->thread_name, "%s_%02d", prefix, i);
 
         if (bf_worker == 1 && create_worker_recv_queue(worker_ctx, MAIN_CTX) < 0) {
-            fprintf(stderr, "%s() fatal! fail to recv queue at worker=[%s]\n", __func__, worker_ctx->thread_name);
+            ERRLOG(LLE, FL, "%s() fatal! fail to recv queue at worker=[%s]\n", __func__, worker_ctx->thread_name);
             return (-1);
         }
 
         if (pthread_create(&worker_ctx->pthread_id, NULL,
                     io_worker ? io_worker_thread : bf_worker_thread,
                     worker_ctx)) {
-            fprintf(stderr, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
+            ERRLOG(LLE, FL, "%s() fatal! fail to create thread=(%s)\n", __func__, worker_ctx->thread_name);
             return (-1);
         }
 
         pthread_setname_np(worker_ctx->pthread_id, worker_ctx->thread_name);
-        fprintf(stderr, "setname=[%s]\n", worker_ctx->thread_name);
+        ERRLOG(LLE, FL, "setname=[%s]\n", worker_ctx->thread_name);
     }
 
     return 0;
@@ -77,14 +77,6 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//  
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "NGAPP"); 
-	if (conflib_initConfigData() < 0) {
-		fprintf(stderr, "[%s.%d] conflib_initConfigData() Error\n", FL);
-		return -1;
-	}
-	if (keepalivelib_init(myAppName) < 0) {
-		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
-		return -1;
-	}
 	//  
 	initLog(myAppName);
 	// start with Log Level Error 
@@ -96,27 +88,36 @@ int initialize(main_ctx_t *MAIN_CTX)
 	TRCLOG(LLE, FL, "Welcome ---------------\n");
 	MSGLOG(LLE, FL, "Welcome ---------------\n");
 
+	if (conflib_initConfigData() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] conflib_initConfigData() Error\n", FL);
+		return -1;
+	}
+	if (keepalivelib_init(myAppName) < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] keepalivelib_init() Error\n", FL);
+		return -1;
+	}
+
 	/* load config */
     config_init(&MAIN_CTX->CFG);
 
 	char tmp_path[1024] = {0,};
 	sprintf(tmp_path, "%s/data/N3IWF_CONFIG/ngapp.cfg", getenv("IV_HOME"));
     if (!config_read_file(&MAIN_CTX->CFG, tmp_path)) {
-        fprintf(stderr, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
+        ERRLOG(LLE, FL, "%s() fatal! fail to load cfg file=(%s) line:text(%d/%s)!\n",
             __func__,
             config_error_file(&MAIN_CTX->CFG),
             config_error_line(&MAIN_CTX->CFG),
             config_error_text(&MAIN_CTX->CFG));
         return (-1);
     } else {
-        fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
+        ERRLOG(LLE, FL, "%s() load cfg ---------------------\n", __func__);
         config_write(&MAIN_CTX->CFG, stderr);
-        fprintf(stderr, "===========================================\n");
+        ERRLOG(LLE, FL, "===========================================\n");
     }
 
 	/* create asn1 context */
 	if (ossinit(&MAIN_CTX->world, NGAP_PDU_Descriptions)) {
-		fprintf(stderr, "Error: ossinit()\n");
+		ERRLOG(LLE, FL, "Error: ossinit()\n");
 		return(-1);
 	} else {
 		ossSetFlags(&MAIN_CTX->world, ossGetFlags(&MAIN_CTX->world) | AUTOMATIC_ENCDEC);
@@ -126,11 +127,11 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* create queue id info */
     if ((MAIN_CTX->QID_INFO.main_qid = commlib_crteMsgQ(l_sysconf, "NGAPP", TRUE)) < 0) {
-        fprintf(stderr, "%s() fatal! queue_id_info.main_qid not exist!\n", __func__);
+        ERRLOG(LLE, FL, "%s() fatal! queue_id_info.main_qid not exist!\n", __func__);
         return (-1);
     }
     if ((MAIN_CTX->QID_INFO.ixpc_qid = commlib_crteMsgQ(l_sysconf, "IXPC", TRUE)) < 0) {
-        fprintf(stderr, "%s() fatal! queue_id_info.ixpc_qid not exist!\n", __func__);
+        ERRLOG(LLE, FL, "%s() fatal! queue_id_info.ixpc_qid not exist!\n", __func__);
         return (-1);
     }
 	int queue_key = 0;

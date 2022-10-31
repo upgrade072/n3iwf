@@ -24,22 +24,22 @@ static void config_watch_callback(struct bufferevent *bev, void *args)
 int watch_directory_init(struct event_base *evbase, const char *path_name, void (*callback_function)(const char *arg_is_path))
 {
     if (callback_function == NULL) {
-        fprintf(stderr, "INIT| ERR| callback function is NULL!");
+        ERRLOG(LLE, FL, "INIT| ERR| callback function is NULL!");
         return -1;
     }
 
     int inotifyFd = inotify_init();
     if (inotifyFd == -1) {
-        fprintf(stderr, "INIT| ERR| inotify init fail!\n");
+        ERRLOG(LLE, FL, "INIT| ERR| inotify init fail!\n");
         return -1;
     }
 
     int inotifyWd = inotify_add_watch(inotifyFd, path_name, IN_CLOSE_WRITE | IN_MOVED_TO);
     if (inotifyWd == -1) {
-        fprintf(stderr, "INIT| ERR| inotify add watch [%s] fail!\n", path_name);
+        ERRLOG(LLE, FL, "INIT| ERR| inotify add watch [%s] fail!\n", path_name);
         return -1;
     } else {
-        fprintf(stderr, "INIT| inotify add watch [%d:%s]\n", inotifyWd, path_name);
+        ERRLOG(LLE, FL, "INIT| inotify add watch [%d:%s]\n", inotifyWd, path_name);
 
         /* ADD CALLBACK ACTION */
         directory_watch_action = callback_function;
@@ -64,7 +64,7 @@ void start_watching_dir(main_ctx_t *MAIN_CTX)
 void watch_sctpc_restart(const char *file_name)
 {           
 	if (!strcmp(file_name, "sctpc_start")) {
-		fprintf(stderr, "\n%s() detect \"sctpc_start\" changed!\n", __func__);
+		ERRLOG(LLE, FL, "\n%s() detect \"sctpc_start\" changed!\n", __func__);
 		remove_amf_list(MAIN_CTX);
 		create_amf_list(MAIN_CTX);
 	}

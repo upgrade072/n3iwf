@@ -7,7 +7,7 @@ int create_amf_list(main_ctx_t *MAIN_CTX)
 	for (int i = 0; i < config_setting_length(cf_amf_list); i++) {
 		config_setting_t *cf_amf = config_setting_get_elem(cf_amf_list, i);
 		const char *hostname = config_setting_get_string(cf_amf);
-		fprintf(stderr, "%s() create amf [%s] context\n", __func__, hostname);
+		ERRLOG(LLE, FL, "%s() create amf [%s] context\n", __func__, hostname);
 
 		/* make amf node ctx */
 		link_node *amf_node = link_node_assign_key_order(&MAIN_CTX->amf_list, hostname, sizeof(amf_ctx_t));
@@ -34,7 +34,7 @@ void amf_regi(int conn_fd, short events, void *data)
 		return;
 	}
 
-	fprintf(stderr, "%s() try [NGSetupRequest] to amf [%s]\n", __func__, amf_ctx->hostname);
+	ERRLOG(LLE, FL, "%s() try [NGSetupRequest] to amf [%s]\n", __func__, amf_ctx->hostname);
 
 	ngap_send_json(amf_ctx->hostname, NULL, MAIN_CTX->js_ng_setup_request);
 }
@@ -43,11 +43,11 @@ void amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx)
 {
 	int amf_regi_interval = 0;
 	if (config_lookup_int(&MAIN_CTX->CFG, "n3iwf_info.amf_regi_interval", &amf_regi_interval) < 0) {
-		fprintf(stderr, "%s() fail to get [n3iwf_info.amf_regi_interval] in .cfg!\n", __func__);
+		ERRLOG(LLE, FL, "%s() fail to get [n3iwf_info.amf_regi_interval] in .cfg!\n", __func__);
 		exit(0);
 	}
 
-	fprintf(stderr, "%s() amf [%s] interval (%d) sec\n", __func__, amf_ctx->hostname, amf_regi_interval);
+	ERRLOG(LLE, FL, "%s() amf [%s] interval (%d) sec\n", __func__, amf_ctx->hostname, amf_regi_interval);
 
 	struct timeval regi_tm = { amf_regi_interval, 0 };
 	amf_ctx->ev_amf_regi = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, amf_regi, amf_ctx);
@@ -73,15 +73,15 @@ int amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap
 	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
 
 	if (amf_ctx == NULL) {
-		fprintf(stderr, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
+		ERRLOG(LLE, FL, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
 		return -1;
 	}
 	if (success != true) {
-		fprintf(stderr, "%s() recv NOK response from amf [%s], will retry!\n", __func__, sctp_tag->hostname);
+		ERRLOG(LLE, FL, "%s() recv NOK response from amf [%s], will retry!\n", __func__, sctp_tag->hostname);
 		return -1;
 	}
 
-	fprintf(stderr, "%s() recv OK response from amf [%s]\n", __func__, sctp_tag->hostname);
+	ERRLOG(LLE, FL, "%s() recv OK response from amf [%s]\n", __func__, sctp_tag->hostname);
 
 	amf_ctx_unset(amf_ctx);
 
@@ -97,14 +97,14 @@ int amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 	amf_ctx_t *amf_ctx = link_node_get_data_by_key(&MAIN_CTX->amf_list, sctp_tag->hostname);
 
 	if (amf_ctx == NULL) {
-		fprintf(stderr, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
+		ERRLOG(LLE, FL, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
 		return -1;
 	}
 
 	json_object *js_unavailable_guami_list = ngap_get_unavailable_guami_list(js_ngap_pdu);
 
 	if (js_unavailable_guami_list != NULL) {
-		fprintf(stderr, "%s() check! unavailable guami list (IEs:120)\n%s\n", __func__, JS_PRINT_PRETTY(js_unavailable_guami_list));
+		ERRLOG(LLE, FL, "%s() check! unavailable guami list (IEs:120)\n%s\n", __func__, JS_PRINT_PRETTY(js_unavailable_guami_list));
 
 		/* re-start ng_setup */
 		amf_ctx_unset(amf_ctx);

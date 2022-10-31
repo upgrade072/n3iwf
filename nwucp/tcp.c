@@ -20,7 +20,7 @@ sock_ctx_t *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index)
 
 void release_sock_ctx(sock_ctx_t *sock_ctx)
 {
-	fprintf(stderr, "%s() called sock from(%s:%d) fd(%d) (%.19s~) closed!\n",
+	ERRLOG(LLE, FL, "%s() called sock from(%s:%d) fd(%d) (%.19s~) closed!\n",
 			__func__, sock_ctx->client_ipaddr, sock_ctx->client_port, sock_ctx->sock_fd, ctime(&sock_ctx->create_time));
 
 	if (sock_ctx->bev) {
@@ -43,11 +43,11 @@ void listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct soc
 	char client_ip[INET_ADDRSTRLEN] = {0,};
 	sprintf(client_ip, "%s", util_get_ip_from_sa(sa));
 
-	fprintf(stderr, "%s() called! (main) (from:%s) (fd:%d)\n", __func__, client_ip, fd);
+	ERRLOG(LLE, FL, "%s() called! (main) (from:%s) (fd:%d)\n", __func__, client_ip, fd);
 
 	int ue_index = ipaddr_range_calc(MAIN_CTX->ue_info.ue_start_ip, client_ip);
 	if (ue_index < 0 || ue_index >= MAIN_CTX->ue_info.ue_num) {
-		fprintf(stderr, "%s() called with invalid client_ip=(%s)\n", __func__, client_ip);
+		ERRLOG(LLE, FL, "%s() called with invalid client_ip=(%s)\n", __func__, client_ip);
 		goto LC_ERR;
 	}
 
@@ -65,25 +65,25 @@ LC_ERR:
 /* handle by worker */
 void accept_sock_cb(int conn_fd, short events, void *data)
 {
-	fprintf(stderr, "%s() called! (at worker:%s)\n", __func__, WORKER_CTX->thread_name);
+	ERRLOG(LLE, FL, "%s() called! (at worker:%s)\n", __func__, WORKER_CTX->thread_name);
 
 	sock_ctx_t *sock_ctx = (sock_ctx_t *)data; /* must be free */
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(sock_ctx->ue_index, WORKER_CTX);
 
 #if 0
 	if (ue_ctx == NULL || ue_ctx->ipsec_sa_created == 0) {
-		fprintf(stderr, "%s() ue_ctx(index:%d) not created or ipsec sa not exist!\n", __func__, sock_ctx->ue_index);
+		ERRLOG(LLE, FL, "%s() ue_ctx(index:%d) not created or ipsec sa not exist!\n", __func__, sock_ctx->ue_index);
 		goto ASC_ERR;
 #else
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "%s() ue_ctx (ip:%s/index:%d) not created!\n", __func__, sock_ctx->client_ipaddr, sock_ctx->ue_index);
+		ERRLOG(LLE, FL, "%s() ue_ctx (ip:%s/index:%d) not created!\n", __func__, sock_ctx->client_ipaddr, sock_ctx->ue_index);
 		goto ASC_ERR;
 #endif
 	}
 
 	/* release older sock if exist */
 	if (ue_ctx->sock_ctx != NULL) {
-		fprintf(stderr, "%s() check ue [%s] have old sock_ctx, release!\n", __func__, UE_TAG(ue_ctx));
+		ERRLOG(LLE, FL, "%s() check ue [%s] have old sock_ctx, release!\n", __func__, UE_TAG(ue_ctx));
 		release_sock_ctx(ue_ctx->sock_ctx);
 		ue_ctx->sock_ctx = NULL;
 	}
@@ -105,6 +105,8 @@ void accept_new_client(ue_ctx_t *ue_ctx, sock_ctx_t *sock_ctx)
 	sock_event_cb(sock_ctx->bev, BEV_EVENT_CONNECTED, ue_ctx);
 	bufferevent_setcb(sock_ctx->bev, sock_read_cb, NULL, sock_event_cb, ue_ctx);
 	bufferevent_enable(sock_ctx->bev, EV_READ);
+
+	sock_flush_cb(ue_ctx);
 }
 
 void sock_event_cb(struct bufferevent *bev, short events, void *data)
@@ -120,9 +122,9 @@ void sock_event_cb(struct bufferevent *bev, short events, void *data)
     }
 
     if (events & BEV_EVENT_EOF) {
-        fprintf(stderr, "%s() confirm closed!\n", __func__);
+        ERRLOG(LLE, FL, "%s() confirm closed!\n", __func__);
     } else if (events & BEV_EVENT_ERROR) {
-        fprintf(stderr, "%s() got conn error!(%d:%s)\n", __func__, errno, strerror(errno));
+        ERRLOG(LLE, FL, "%s() got conn error!(%d:%s)\n", __func__, errno, strerror(errno));
     }
 
 	release_sock_ctx(sock_ctx);
@@ -164,7 +166,7 @@ SRC_RETRY:
 		goto SRC_RETRY; /* maybe data remain */
 	}
 	if (errno == EINTR) {
-		fprintf(stderr, "%s() ue [%s] sock error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+		ERRLOG(LLE, FL, "%s() ue [%s] sock error! (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 		release_sock_ctx(sock_ctx);
 		ue_ctx->sock_ctx = NULL;
 		return;
@@ -175,7 +177,7 @@ void sock_flush_cb(ue_ctx_t *ue_ctx)
 {
 	sock_ctx_t *sock_ctx = ue_ctx->sock_ctx;
 	if (sock_ctx == NULL) {
-		fprintf(stderr, "TODO %s() fail cause sock_ctx=[null]!\n", __func__);
+		ERRLOG(LLE, FL, "TODO %s() fail cause sock_ctx=[null]!\n", __func__);
 		return;
 	}
 
@@ -198,7 +200,7 @@ void sock_flush_cb(ue_ctx_t *ue_ctx)
 
 		size_t expect_len = iov[0].iov_len + iov[1].iov_len;
 		if (writev(sock_ctx->sock_fd, iov, 2) != expect_len) {
-			fprintf(stderr, "%s() ue [%s] writev failed (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
+			ERRLOG(LLE, FL, "%s() ue [%s] writev failed (%d:%s)\n", __func__, UE_TAG(ue_ctx), errno, strerror(errno));
 			release_sock_ctx(sock_ctx);
 			ue_ctx->sock_ctx = NULL;
 			return;

@@ -7,13 +7,13 @@ void handle_udp_request(int fd, short event, void *arg)
 {   
 	recv_buf_t *recv_buf = (recv_buf_t *)arg;
 	if (recv_buf->size < (sizeof(n3iwf_msg_t) - 1)) {
-		fprintf(stderr, "%s() recv insufficient packet len!\n", __func__);
+		ERRLOG(LLE, FL, "%s() recv insufficient packet len!\n", __func__);
 		goto HUR_END;
 	}
 
 	n3iwf_msg_t *n3iwf_msg = (n3iwf_msg_t *)recv_buf->buffer;
 	if (N3IWF_MSG_SIZE(n3iwf_msg) != recv_buf->size) {
-		fprintf(stderr, "%s() recv invalid size!=(%ld) payload_len=(%d)\n", 
+		ERRLOG(LLE, FL, "%s() recv invalid size!=(%ld) payload_len=(%d)\n", 
 				__func__, N3IWF_MSG_SIZE(n3iwf_msg), htons(n3iwf_msg->payload_len));
 		goto HUR_END;
 	}
@@ -24,7 +24,7 @@ void handle_udp_request(int fd, short event, void *arg)
 	create_ike_tag(&ike_msg->ike_tag, &recv_buf->from_addr);
 	memcpy(&ike_msg->n3iwf_msg, n3iwf_msg, sizeof(n3iwf_msg_t)); /* for save tag */
 
-	fprintf(stderr, "\n(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
+	ERRLOG(LLE, FL, "\n(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			WORKER_CTX->thread_name,
 			n3_msg_code_str(n3iwf_msg->msg_code),
@@ -48,7 +48,7 @@ void handle_ike_request(ike_msg_t *ike_msg)
 	n3iwf_msg_t *n3iwf_msg = (n3iwf_msg_t *)pdu_buff;
 	memcpy(n3iwf_msg, &ike_msg->n3iwf_msg, sizeof(n3iwf_msg_t));
 
-	fprintf(stderr, "\n(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
+	ERRLOG(LLE, FL, "\n(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			WORKER_CTX->thread_name,
 			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			n3_msg_code_str(n3iwf_msg->msg_code),

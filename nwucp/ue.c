@@ -11,7 +11,7 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 	char ip_start[256] = {0,}, ip_end[256] = {0,};
 	int ret = (ipaddr_range_scan(ip_range, ip_start, ip_end));
 	if (ret <= 0) {
-		fprintf(stderr, "%s fail to get ip range from=[%s]\n", __func__, ip_range);
+		ERRLOG(LLE, FL, "%s fail to get ip range from=[%s]\n", __func__, ip_range);
 		return (-1);
 	} else {
 		sprintf(MAIN_CTX->ue_info.ue_start_ip, "%s", ip_start);
@@ -19,7 +19,7 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 
 	int num_of_addr = ipaddr_range_calc(ip_start, ip_end);
 	if (num_of_addr <= 0 || num_of_addr > MAX_NWUCP_UE_NUM) {
-		fprintf(stderr, "%s fail cause num_of_addr=[%d] wrong\n", __func__, num_of_addr);
+		ERRLOG(LLE, FL, "%s fail cause num_of_addr=[%d] wrong\n", __func__, num_of_addr);
 		return (-1);
 	}
 	MAIN_CTX->ue_info.ue_num = num_of_addr;
@@ -35,7 +35,7 @@ int create_ue_list(main_ctx_t *MAIN_CTX)
 		ip_list = ipaddr_increaser(ip_list);
 	}
 
-	fprintf(stderr, "%s() create ue from_%s ~ to_%s, num=(%d) netmask=(%d)\n", 
+	ERRLOG(LLE, FL, "%s() create ue from_%s ~ to_%s, num=(%d) netmask=(%d)\n", 
 			__func__, ip_start, ip_end, MAIN_CTX->ue_info.ue_num, MAIN_CTX->ue_info.netmask);
 
 	return (0);
@@ -49,7 +49,7 @@ ue_ctx_t *ue_ctx_assign(main_ctx_t *MAIN_CTX)
 		if (ue_ctx->occupied == 0) {
 			ue_ctx->occupied = 1;
 			MAIN_CTX->ue_info.cur_index = index;
-			fprintf(stderr, "%s() assign ue ctx (index:%d, ip:%s)\n", __func__, index, ue_ctx->ip_addr);
+			ERRLOG(LLE, FL, "%s() assign ue ctx (index:%d, ip:%s)\n", __func__, index, ue_ctx->ip_addr);
 			return ue_ctx;
 		}
 	}
@@ -63,7 +63,7 @@ int ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 	ue_ctx_t *ue_ctx = ue_ctx_assign(MAIN_CTX);
 
 	if (ue_ctx == NULL) {
-		fprintf(stderr, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
+		ERRLOG(LLE, FL, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
 		return -1;
 	}
 	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
@@ -80,19 +80,19 @@ int ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 {
 	if (index >= MAIN_CTX->ue_info.ue_num) {
-		fprintf(stderr, "%s() called with invalid ue_index (%d), ue_num=(%d)!\n", 
+		ERRLOG(LLE, FL, "%s() called with invalid ue_index (%d), ue_num=(%d)!\n", 
 				__func__, index, MAIN_CTX->ue_info.ue_num);
 		return NULL;
 	}
 	if ((index % MAIN_CTX->IO_WORKERS.worker_num) != worker_ctx->thread_index) {
-		fprintf(stderr, "%s() called with invalid worker (%d), ue_index (%d) valid worker=(%d)!\n", 
+		ERRLOG(LLE, FL, "%s() called with invalid worker (%d), ue_index (%d) valid worker=(%d)!\n", 
 				__func__, worker_ctx->thread_index, index, index % MAIN_CTX->IO_WORKERS.worker_num);
 		return NULL;
 	}
 
 	ue_ctx_t *ue_ctx = &MAIN_CTX->ue_info.ue_ctx[index];
 	if (ue_ctx->occupied == 0) {
-		fprintf(stderr, "%s() called with invalid ue_index (%d), it's unoccupied!\n", __func__, index);
+		ERRLOG(LLE, FL, "%s() called with invalid ue_index (%d), it's unoccupied!\n", __func__, index);
 		return NULL;
 	}
 
@@ -101,13 +101,8 @@ ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
 
 void ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state)
 {
-#if 0
-	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s] => [%s]\n", 
-			ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, ue_ctx->state, new_state);
-#else
-	fprintf(stderr, "ue_ctx (cp_id:%d up_id:%d) state change [%s]\n", 
+	ERRLOG(LLE, FL, "ue_ctx (cp_id:%d up_id:%d) state change [%s]\n", 
 			ue_ctx->ctx_info.cp_id, ue_ctx->ctx_info.up_id, new_state);
-#endif
 
 	ue_ctx->state = new_state;
 }
@@ -123,6 +118,9 @@ void ue_ctx_stop_timer(ue_ctx_t *ue_ctx)
 void ue_ctx_release(int conn_fd, short events, void *data)
 {
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)data;
+
+	ERRLOG(LLE, FL, "%s() called ue ctx=[%s] state(%s) ipsec_sa_created(%d)\n",
+		   	__func__, UE_TAG(ue_ctx), ue_ctx->state, ue_ctx->ipsec_sa_created);
 
 	memset(&ue_ctx->ike_tag, 0x00, sizeof(ike_tag_t));
 	memset(&ue_ctx->amf_tag, 0x00, sizeof(amf_tag_t));
@@ -158,7 +156,7 @@ void ue_ctx_unset(ue_ctx_t *ue_ctx)
 {
 	ue_ctx_stop_timer(ue_ctx);
 
-	fprintf(stderr, "%s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
+	ERRLOG(LLE, FL, "%s() release ue ctx at=[%s] (index:%d, ip:%s)\n", __func__, ue_ctx->state, ue_ctx->index, ue_ctx->ip_addr);
 
 	ue_ctx->state = NULL;
 	ue_ctx->occupied = 0;
@@ -186,7 +184,7 @@ int ue_compare_guami(an_param_t *an_param, json_object *js_guami)
 				json_object_get_string(search_json_object(js_elem, "/gUAMI/aMFPointer")));
 
 		if (!strcmp(guami_str, compare_str)) {
-			fprintf(stderr, "%s() find guami=[%s] in (%d)th elem of amf profile!\n", __func__, guami_str, i);
+			ERRLOG(LLE, FL, "%s() find guami=[%s] in (%d)th elem of amf profile!\n", __func__, guami_str, i);
 			return 1;
 		}
 	}
@@ -209,7 +207,7 @@ int ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list)
 				json_object_get_string(search_json_object(js_elem, "/s-NSSAI/sD")));
 
 		if (!strcmp(sstsd_str, compare_str)) {
-			fprintf(stderr, "%s() find sstsd=[%s] in (%d)th elem of amf profile (sliceSupportList)!\n", __func__, sstsd_str, i);
+			ERRLOG(LLE, FL, "%s() find sstsd=[%s] in (%d)th elem of amf profile (sliceSupportList)!\n", __func__, sstsd_str, i);
 			return 1;
 		}
 	}
@@ -285,7 +283,7 @@ int ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 		if (ue_check_an_param_with_amf(eap_5g, js_guami, js_plmn_id) > 0) {
 			find_amf = 1;
 			sprintf(ike_msg->ike_tag.cp_amf_host, "%s", amf_ctx->hostname);
-			fprintf(stderr, "%s() find an_param match at amf=[%s] cp_id=(%d)\n", __func__, amf_ctx->hostname, ike_msg->n3iwf_msg.ctx_info.cp_id);
+			ERRLOG(LLE, FL, "%s() find an_param match at amf=[%s] cp_id=(%d)\n", __func__, amf_ctx->hostname, ike_msg->n3iwf_msg.ctx_info.cp_id);
 			break;
 		}
 	}
@@ -310,7 +308,7 @@ int ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
     uint32_t ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
 
     if (amf_ue_ngap_id < 0 || ran_ue_ngap_id < 0) {
-        fprintf(stderr, "%s() ue [%s] fail cause ngap_id not exist!\n", __func__, UE_TAG(ue_ctx));
+        ERRLOG(LLE, FL, "%s() ue [%s] fail cause ngap_id not exist!\n", __func__, UE_TAG(ue_ctx));
 		return -1;
 	} else {
         ue_ctx->amf_tag.amf_ue_id = amf_ue_ngap_id;

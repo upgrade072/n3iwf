@@ -23,7 +23,7 @@ int pdu_proc_fill_qos_flow_ids(n3_pdu_sess_t *pdu_sess, json_object *js_pdu_qos_
 		/* check mandatory */
 		json_object *js_qos_flow_id = search_json_object(js_elem, "/qosFlowIdentifier");
 		if (js_qos_flow_id == NULL) {
-			fprintf(stderr, "TODO %s() check mandatory fail!\n", __func__);
+			ERRLOG(LLE, FL, "TODO %s() check mandatory fail!\n", __func__);
 			continue;
 		}
 
@@ -46,10 +46,10 @@ int pdu_proc_fill_pdu_sess_release_list(ue_ctx_t *ue_ctx, json_object *js_pdu_se
 		const char *pdu_sess_rel_cause		= ngap_get_pdu_sess_rel_cause(js_elem);
 
 		if (pdu_sess_id	< 0 || pdu_sess_rel_cause	== NULL) {
-			fprintf(stderr, "TODO %s() check mandatory fail!\n", __func__);
+			ERRLOG(LLE, FL, "TODO %s() check mandatory fail!\n", __func__);
 			continue;
 		} else {
-			fprintf(stderr, "%s() ue [%s] delete pdu (id:%d) cause(%s)\n", __func__, UE_TAG(ue_ctx), pdu_sess_id, pdu_sess_rel_cause);
+			ERRLOG(LLE, FL, "%s() ue [%s] delete pdu (id:%d) cause(%s)\n", __func__, UE_TAG(ue_ctx), pdu_sess_id, pdu_sess_rel_cause);
 		}
 
 		n3_pdu_sess_t *pdu_sess = &pdu_sess_list[num_of_pdu++];
@@ -85,7 +85,7 @@ int pdu_proc_fill_pdu_sess_setup_list(ue_ctx_t *ue_ctx, json_object *js_pdu_sess
 				gtp_te_id == NULL || 
 				pdu_sess_type == NULL || 
 				js_pdu_qos_flow_ids == NULL) {
-			fprintf(stderr, "TODO %s() check mandatory fail!\n", __func__);
+			ERRLOG(LLE, FL, "TODO %s() check mandatory fail!\n", __func__);
 			continue;
 		}
 
@@ -110,7 +110,7 @@ void pdu_proc_sess_establish_accept(pdu_ctx_t *pdu_ctx, void *arg)
 {
 	ue_ctx_t *ue_ctx = (ue_ctx_t *)arg;
 
-	fprintf(stderr, "%s() ue [%s] tcp write pdu (id:%d) accept nas message\n", __func__, UE_TAG(ue_ctx),  pdu_ctx->pdu_sess_id);
+	ERRLOG(LLE, FL, "%s() ue [%s] tcp write pdu (id:%d) accept nas message\n", __func__, UE_TAG(ue_ctx),  pdu_ctx->pdu_sess_id);
 
 	pdu_ctx->pdu_state = PS_CREATED;
 

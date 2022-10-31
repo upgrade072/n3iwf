@@ -11,14 +11,14 @@ void udp_sock_read_callback(int fd, short event, void *arg)
 	socklen_t fl = sizeof(struct sockaddr_in);
 
 	if ((recv_buf = get_recv_buf(&MAIN_CTX->udp_buff)) == NULL) {
-		fprintf(stderr, "{dbg} oops~ %s() can't get recv_buf!\n", __func__);
+		ERRLOG(LLE, FL, "{dbg} oops~ %s() can't get recv_buf!\n", __func__);
 		goto USRC_ERR;
 	}
 
 	if ((recv_buf->size = 
 			recvfromto(fd, recv_buf->buffer, MAIN_CTX->udp_buff.each_size, 0, 
 			(struct sockaddr *)&recv_buf->from_addr, &fl, NULL, NULL)) < 0) {
-		fprintf(stderr, "{dbg} oops~ %s() err (%d:%s)\n", __func__, errno, strerror(errno));
+		ERRLOG(LLE, FL, "{dbg} oops~ %s() err (%d:%s)\n", __func__, errno, strerror(errno));
 		goto USRC_ERR;
 	}
 
