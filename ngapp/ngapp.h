@@ -86,6 +86,8 @@ typedef struct recv_buff_t {
 } recv_buff_t;
 
 typedef struct qid_info_t {
+	int main_qid;
+	int ixpc_qid;
 	int ngapp_sctpc_qid;
 	int sctpc_ngapp_qid;
 	int ngapp_nwucp_qid;
@@ -129,14 +131,9 @@ typedef struct main_ctx_t {
 /* ------------------------- stat.c --------------------------- */
 int     ngap_pdu_proc_code(NGAP_PDU *ngap_pdu);
 void    NGAP_STAT_COUNT(NGAP_PDU *ngap_pdu, ngap_stat_type_t stat_type);
-void    NGAP_STAT_PRINT(main_ctx_t *MAIN_CTX);
-
-/* ------------------------- io_worker.c --------------------------- */
-void    handle_ngap_send(int conn_fd, short events, void *data);
-json_object     *extract_distr_key(json_object *js_ngap_pdu, key_list_t *key_list);
-void    handle_ngap_recv(int conn_fd, short events, void *data);
-void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
-void    *io_worker_thread(void *arg);
+void    NGAP_STAT_GATHER(main_ctx_t *MAIN_CTX, ngap_op_count_t STAT[NGAP_STAT_NUM]);
+void    NGAP_STAT_PRINT(ngap_op_count_t STAT[NGAP_STAT_NUM]);
+void    send_conn_stat(main_ctx_t *MAIN_CTX, IxpcQMsgType *rxIxpcMsg);
 
 /* ------------------------- bf_worker.c --------------------------- */
 int     select_io_worker_index();
@@ -147,9 +144,17 @@ void    bf_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 void    bf_thrd_tick(evutil_socket_t fd, short events, void *data);
 void    *bf_worker_thread(void *arg);
 
+/* ------------------------- io_worker.c --------------------------- */
+void    handle_ngap_send(int conn_fd, short events, void *data);
+json_object     *extract_distr_key(json_object *js_ngap_pdu, key_list_t *key_list);
+void    handle_ngap_recv(int conn_fd, short events, void *data);
+void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
+void    *io_worker_thread(void *arg);
+
 /* ------------------------- main.c --------------------------- */
 int     create_worker_recv_queue(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
 int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
 int     initialize(main_ctx_t *MAIN_CTX);
 void    main_tick(int conn_fd, short events, void *data);
+void    main_msgq_read_callback(evutil_socket_t fd, short events, void *data);
 int     main();

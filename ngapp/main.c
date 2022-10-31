@@ -77,6 +77,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 	//  
 	sprintf(mySysName, "%.15s", getenv("MY_SYS_NAME"));
 	sprintf(myAppName, "%.15s", "NGAPP"); 
+	if (conflib_initConfigData() < 0) {
+		fprintf(stderr, "[%s.%d] conflib_initConfigData() Error\n", FL);
+		return -1;
+	}
 	if (keepalivelib_init(myAppName) < 0) {
 		fprintf(stderr, "[%s.%d] keepalivelib_init() Error\n", FL);
 		return -1;
@@ -108,11 +112,6 @@ int initialize(main_ctx_t *MAIN_CTX)
         fprintf(stderr, "%s() load cfg ---------------------\n", __func__);
         config_write(&MAIN_CTX->CFG, stderr);
         fprintf(stderr, "===========================================\n");
-#if 0
-        config_set_options(&MAIN_CTX->CFG, 0);
-        config_set_tab_width(&MAIN_CTX->CFG, 4);
-        config_write_file(&MAIN_CTX->CFG, "./ngapp.cfg"); // save cfg with indent
-#endif
     }
 
 	/* create asn1 context */
@@ -126,6 +125,14 @@ int initialize(main_ctx_t *MAIN_CTX)
 	}
 
 	/* create queue id info */
+    if ((MAIN_CTX->QID_INFO.main_qid = commlib_crteMsgQ(l_sysconf, "NGAPP", TRUE)) < 0) {
+        fprintf(stderr, "%s() fatal! queue_id_info.main_qid not exist!\n", __func__);
+        return (-1);
+    }
+    if ((MAIN_CTX->QID_INFO.ixpc_qid = commlib_crteMsgQ(l_sysconf, "IXPC", TRUE)) < 0) {
+        fprintf(stderr, "%s() fatal! queue_id_info.ixpc_qid not exist!\n", __func__);
+        return (-1);
+    }
 	int queue_key = 0;
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_sctpc_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.ngapp_sctpc_qid = util_get_queue_info(queue_key, "ngapp_sctpc_queue")) < 0) {
@@ -173,8 +180,30 @@ int initialize(main_ctx_t *MAIN_CTX)
 void main_tick(int conn_fd, short events, void *data)
 {
 	keepalivelib_increase();
+}
 
-	NGAP_STAT_PRINT(MAIN_CTX);
+
+void main_msgq_read_callback(evutil_socket_t fd, short events, void *data)
+{
+    main_ctx_t *MAIN_CTX = (main_ctx_t *)data;
+
+    char recv_buffer[1024*64];
+    GeneralQMsgType *msg = (GeneralQMsgType *)recv_buffer;
+    int recv_size = 0;
+
+    while ((recv_size = msgrcv(MAIN_CTX->QID_INFO.main_qid, msg, sizeof(recv_buffer), 0, IPC_NOWAIT)) >= 0) {
+        switch(msg->mtype) {
+            case MTYPE_SETPRINT:
+                continue;
+            case MTYPE_MMC_REQUEST:
+                continue;
+            case MTYPE_STATISTICS_REQUEST:
+                send_conn_stat(MAIN_CTX, (IxpcQMsgType *)msg->body);
+                continue;
+            default:
+                continue;
+        }
+    }
 }
 
 int main()
@@ -190,6 +219,10 @@ int main()
 	struct timeval one_sec = {1, 0};
 	struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
 	event_add(ev_tick, &one_sec);
+
+	struct timeval one_u_sec = {0,1};
+	struct event *ev_msgq_read = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_msgq_read_callback, MAIN_CTX);
+	event_add(ev_msgq_read, &one_u_sec);
 
 	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 
