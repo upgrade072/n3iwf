@@ -166,6 +166,8 @@ typedef struct main_ctx_t {
 	config_t			CFG;
 	struct event_base	*evbase_main;
 
+	pthread_mutex_t		mutex_for_ovldctrl;
+
 	qid_info_t			QID_INFO;
 	worker_thread_t		IO_WORKERS;
 	tcp_ctx_t			tcp_server;
@@ -322,3 +324,10 @@ void    sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx);
 int     watch_directory_init(struct event_base *evbase, const char *path_name, void (*callback_function)(const char *arg_is_path));
 void    start_watching_dir(main_ctx_t *MAIN_CTX);
 void    watch_sctpc_restart(const char *file_name);
+
+/* ------------------------- overload.c --------------------------- */
+int     NWUCP_OVLD_CHECK(int svc_id, char *oper_str);
+int     NWUCP_OVLD_CHK_NGAP(int proc_code);
+int     NWUCP_OVLD_CHK_EAP(n3iwf_msg_t *n3iwf_msg);
+int     NWUCP_OVLD_CHK_TCP();
+

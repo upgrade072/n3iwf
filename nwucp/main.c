@@ -149,6 +149,14 @@ int initialize(main_ctx_t *MAIN_CTX)
 		fprintf(stderr, "[%s.%d] msgtrclib_init() Error\n", FL);
 		return -1;
 	}
+	if (pthread_mutex_init(&MAIN_CTX->mutex_for_ovldctrl, NULL) != 0) {
+		fprintf(stderr, "[%s.%d] pthread_mutex_init() Error\n", FL);
+		return -1;
+	}
+	if (ovldlib_init(myAppName) < 0) {
+		fprintf(stderr, "[%s.%d] ovldlib_init() Error\n", FL);
+		return -1;
+	}
 	// 
 	initLog(myAppName);
 	// start with Log Level Error 

@@ -364,11 +364,9 @@ int olcd_chg_ovld_cfg (IxpcQMsgType *rxIxpcMsg)
 
     if (!strncasecmp (arg_type, "TPS_", 4))
     {
-        if (strstr (arg_type, "AUTH"))					svc_id = OVLD_CTRL_SVC_RADIUS_AUTH;
-        else if (strstr (arg_type, "ACNT_ACCESS"))		svc_id = OVLD_CTRL_SVC_RADIUS_ACNT_ACCESS;
-        else if (strstr (arg_type, "ACNT_STATUS"))		svc_id = OVLD_CTRL_SVC_RADIUS_ACNT_STATUS;
-        else if (strstr (arg_type, "HTTP"))				svc_id = OVLD_CTRL_SVC_HTTP;
-        //else if (strstr (arg_type, "DB"))				svc_id = OVLD_CTRL_SVC_DB_ACC;
+        if (strstr (arg_type, "NGAP"))					svc_id = OVLD_CTRL_SVC_NGAP;
+        else if (strstr (arg_type, "TCP"))				svc_id = OVLD_CTRL_SVC_TCP;
+        else if (strstr (arg_type, "EAP"))				svc_id = OVLD_CTRL_SVC_EAP;
         else {
             len += sprintf (&resBuf[len], "  REASON = UNKNOWN TYPE\n");
             return olcd_sendMMCResponse (rxIxpcMsg, resBuf, RES_FAIL);

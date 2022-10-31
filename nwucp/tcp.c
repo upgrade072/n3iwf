@@ -151,7 +151,9 @@ SRC_RETRY:
 
 			NWUCP_TRACE(ue_ctx, DIR_UE_TO_ME, NULL, nas_str);
 
-			ngap_send_uplink_nas(ue_ctx, nas_str);
+			if (NWUCP_OVLD_CHK_TCP() == 0) {
+				ngap_send_uplink_nas(ue_ctx, nas_str);
+			}
 			memmove(sock_ctx->sock_buffer, &sock_ctx->sock_buffer[nas_size], sock_ctx->remain_size - nas_size);
 			sock_ctx->remain_size -= nas_size;
 		}

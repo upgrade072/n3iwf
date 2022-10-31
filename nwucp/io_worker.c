@@ -29,6 +29,11 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 	/* save sctp_tag to ue_ctx & TRACE */
 	ue_save_sctp_tag(ngap_msg, js_ngap_pdu, caller);
 
+	/* check overload status */
+	if (NWUCP_OVLD_CHK_NGAP(proc_code) < 0) {
+		goto HNM_DISCARD;
+	}
+
 	switch (proc_code) 
 	{
 		/* AMF MESSAGE (HANDLE BY MAIN) */
@@ -61,6 +66,7 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 			break;
 	}
 
+HNM_DISCARD:
 	if (js_ngap_pdu != NULL) {
 		json_object_put(js_ngap_pdu);
 	}
@@ -82,6 +88,11 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	eap_relay_t *eap_5g = &ike_msg->eap_5g;
+
+	/* check overload status */
+	if (NWUCP_OVLD_CHK_EAP(n3iwf_msg) < 0) {
+		return;
+	}
 
 	switch (n3iwf_msg->msg_code)
 	{

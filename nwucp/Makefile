@@ -16,7 +16,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  ../PKG/MP/lib/libmmc.a \
 				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c trace.c
+SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c trace.c overload.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN
