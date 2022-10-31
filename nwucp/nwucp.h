@@ -178,25 +178,6 @@ typedef struct main_ctx_t {
 	ue_info_t			ue_info;
 } main_ctx_t;
 
-/* ------------------------- main.c --------------------------- */
-int     load_config(config_t *CFG);
-int     create_n3iwf_profile(main_ctx_t *MAIN_CTX);
-int     create_qid_info(main_ctx_t *MAIN_CTX);
-int     create_tcp_server(main_ctx_t *MAIN_CTX);
-int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
-int     initialize(main_ctx_t *MAIN_CTX);
-void    main_tick(int conn_fd, short events, void *data);
-int     main();
-
-/* ------------------------- amf.c --------------------------- */
-int     create_amf_list(main_ctx_t *MAIN_CTX);
-void    remove_amf_list(main_ctx_t *MAIN_CTX);
-void    amf_regi(int conn_fd, short events, void *data);
-void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
-void    amf_ctx_unset(amf_ctx_t *amf_ctx);
-void    amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu);
-void    amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-
 /* ------------------------- ngap.c --------------------------- */
 void    ngap_send_json(char *hostname, ue_ctx_t *ue_ctx, json_object *js_ngap_pdu);
 json_object     *create_ng_setup_request_json(const char *mnc_mcc, int n3iwf_id, const char *ran_node_name, json_object *js_support_ta_item);
@@ -208,10 +189,15 @@ json_object     *create_pdu_session_resource_setup_response_json(const char *res
 json_object     *create_ue_context_release_request_json(uint32_t amf_ue_id, uint32_t ran_ue_id, ue_ctx_t *ue_ctx);
 json_object     *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_t ran_ue_id, char *ip_str, int port, ue_ctx_t *ue_ctx);
 
+/* ------------------------- trace.c --------------------------- */
+void    NWUCP_TRACE(ue_ctx_t *ue_ctx, trace_type_t direction, json_object *js_ngap_pdu, const char *nas_msg);
+int     TRACE_MAKE_MSG_HEAD(ue_ctx_t *ue_ctx, int direction, const char *PROC_STR, TraceMsgHead *head, char *body);
+size_t  TRACE_MAKE_MSG_BODY(char *body, const char *raw_msg);
+
 /* ------------------------- ue.c --------------------------- */
 int     create_ue_list(main_ctx_t *MAIN_CTX);
 ue_ctx_t        *ue_ctx_assign(main_ctx_t *MAIN_CTX);
-void    ue_assign_by_ike_auth(ike_msg_t *ike_msg);
+int     ue_assign_by_ike_auth(ike_msg_t *ike_msg);
 ue_ctx_t        *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx);
 void    ue_ctx_transit_state(ue_ctx_t *ue_ctx, const char *new_state);
 void    ue_ctx_stop_timer(ue_ctx_t *ue_ctx);
@@ -221,14 +207,38 @@ int     ue_compare_guami(an_param_t *an_param, json_object *js_guami);
 int     ue_compare_nssai(const char *sstsd_str, json_object *js_slice_list);
 int     ue_compare_plmn_nssai(an_param_t *an_param, json_object *js_plmn_id);
 int     ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, json_object *js_plmn_id);
-void    ue_set_amf_by_an_param(ike_msg_t *ike_msg);
+int     ue_set_amf_by_an_param(ike_msg_t *ike_msg);
 int     ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu);
 
-/* ------------------------- trace.c --------------------------- */
-const   char *NGAP_PROC_C_STR(int proc_code);
-void    NWUCP_TRACE(ue_ctx_t *ue_ctx, trace_type_t direction, json_object *js_ngap_pdu, const char *nas_msg);
-int     TRACE_MAKE_MSG_HEAD(ue_ctx_t *ue_ctx, int direction, const char *PROC_STR, TraceMsgHead *head, char *body);
-size_t  TRACE_MAKE_MSG_BODY(char *body, const char *raw_msg);
+/* ------------------------- tcp.c --------------------------- */
+sock_ctx_t      *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index);
+void    release_sock_ctx(sock_ctx_t *sock_ctx);
+void    listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sa, int socklen, void *data);
+void    accept_sock_cb(int conn_fd, short events, void *data);
+void    accept_new_client(ue_ctx_t *ue_ctx, sock_ctx_t *sock_ctx);
+void    sock_event_cb(struct bufferevent *bev, short events, void *data);
+void    sock_read_cb(struct bufferevent *bev, void *data);
+void    sock_flush_cb(ue_ctx_t *ue_ctx);
+void    sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx);
+
+/* ------------------------- main.c --------------------------- */
+int     load_config(config_t *CFG);
+int     create_n3iwf_profile(main_ctx_t *MAIN_CTX);
+int     create_qid_info(main_ctx_t *MAIN_CTX);
+int     create_tcp_server(main_ctx_t *MAIN_CTX);
+int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
+int     initialize(main_ctx_t *MAIN_CTX);
+void    main_tick(int conn_fd, short events, void *data);
+int     main();
+
+/* ------------------------- overload.c --------------------------- */
+int     NWUCP_OVLD_CHECK(int svc_id, char *oper_str);
+int     NWUCP_OVLD_CHK_NGAP(int proc_code);
+void    NWUCP_OVLD_CHK_FAIL_NGAP(int proc_code, int res);
+int     NWUCP_OVLD_CHK_EAP(n3iwf_msg_t *n3iwf_msg);
+void    NWUCP_OVLD_CHK_FAIL_EAP(n3iwf_msg_t *n3iwf_msg, int res);
+int     NWUCP_OVLD_CHK_TCP();
+void    NWUCP_OVLD_CHK_FAIL_TCP();
 
 /* ------------------------- pdu.c --------------------------- */
 pdu_ctx_t       *create_pdu_ctx(int pdu_sess_id, int state, const char *pdu_nas_pdu);
@@ -260,6 +270,53 @@ int64_t ngap_get_ctx_rel_ran_ue_ngap_id(json_object *js_ngap_pdu);
 const   char *ngap_get_ctx_rel_cause(json_object *js_ngap_pdu);
 json_object     *ngap_get_unavailable_guami_list(json_object *js_ngap_pdu);
 
+/* ------------------------- send.c --------------------------- */
+uint8_t create_eap_id();
+void    eap_send_eap_request(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu);
+void    eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key);
+void    ike_send_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
+void    ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
+void    ike_send_ue_release(ue_ctx_t *ue_ctx);
+int     ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str);
+void    tcp_save_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+void    tcp_send_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+
+/* ------------------------- handler.c --------------------------- */
+void    eap_proc_5g_start(int conn_fd, short events, void *data);
+void    eap_proc_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+void    eap_proc_final(ue_ctx_t *ue_ctx, bool success, const char *security_key);
+void    tcp_proc_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
+void    ike_proc_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
+void    ike_proc_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
+void    ike_proc_ue_release(ue_ctx_t *ue_ctx);
+int     ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+int     ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
+void    ngap_proc_ue_context_release_request(ue_ctx_t *ue_ctx);
+void    ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx);
+int     nas_relay_to_amf(ike_msg_t *ike_msg);
+int     nas_regi_to_amf(ike_msg_t *ike_msg);
+void    ue_save_sctp_tag(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu, event_caller_t caller);
+int     nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+int     ue_context_release(ike_msg_t *ike_msg);
+int     ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+int     ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+int     ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+int     ue_pdu_setup_res_handle(ike_msg_t *ike_msg);
+int     ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+int     ue_inform_res_handle(ike_msg_t *ike_msg);
+
+/* ------------------------- amf.c --------------------------- */
+int     create_amf_list(main_ctx_t *MAIN_CTX);
+void    remove_amf_list(main_ctx_t *MAIN_CTX);
+void    amf_regi(int conn_fd, short events, void *data);
+void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
+void    amf_ctx_unset(amf_ctx_t *amf_ctx);
+int     amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu);
+int     amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
+
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_ngap_log(const char *prefix, ngap_msg_t *ngap_msg, event_caller_t caller);
 void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
@@ -271,63 +328,7 @@ worker_ctx_t    *worker_ctx_get_by_index(int index);
 void    io_thrd_tick(int conn_fd, short events, void *data);
 void    *io_worker_thread(void *arg);
 
-/* ------------------------- handler.c --------------------------- */
-void    eap_proc_5g_start(int conn_fd, short events, void *data);
-void    eap_proc_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-void    eap_proc_final(ue_ctx_t *ue_ctx, bool success, const char *security_key);
-void    tcp_proc_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-void    ike_proc_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
-void    ike_proc_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
-void    ike_proc_ue_release(ue_ctx_t *ue_ctx);
-void    ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg);
-void    ngap_proc_ue_context_release_request(ue_ctx_t *ue_ctx);
-void    ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx);
-void    nas_relay_to_amf(ike_msg_t *ike_msg);
-void    nas_regi_to_amf(ike_msg_t *ike_msg);
-void    ue_save_sctp_tag(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu, event_caller_t caller);
-void    nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    ue_context_release(ike_msg_t *ike_msg);
-void    ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    ue_pdu_setup_res_handle(ike_msg_t *ike_msg);
-void    ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-void    ue_inform_res_handle(ike_msg_t *ike_msg);
-
-/* ------------------------- send.c --------------------------- */
-uint8_t create_eap_id();
-void    eap_send_eap_request(ue_ctx_t *ue_ctx, int msg_id, const char *nas_pdu);
-void    eap_send_final_eap(ue_ctx_t *ue_ctx, bool success, const char *security_key);
-void    ike_send_pdu_release(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
-void    ike_send_pdu_request(ue_ctx_t *ue_ctx, n3_pdu_info_t *pdu_info);
-void    ike_send_ue_release(ue_ctx_t *ue_ctx);
-void    ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str);
-void    tcp_save_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-void    tcp_send_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
-
-/* ------------------------- tcp.c --------------------------- */
-sock_ctx_t      *create_sock_ctx(int fd, struct sockaddr *sa, int ue_index);
-void    release_sock_ctx(sock_ctx_t *sock_ctx);
-void    listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sa, int socklen, void *data);
-void    accept_sock_cb(int conn_fd, short events, void *data);
-void    accept_new_client(ue_ctx_t *ue_ctx, sock_ctx_t *sock_ctx);
-void    sock_event_cb(struct bufferevent *bev, short events, void *data);
-void    sock_read_cb(struct bufferevent *bev, void *data);
-void    sock_flush_cb(ue_ctx_t *ue_ctx);
-void    sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx);
-
 /* ------------------------- watch.c --------------------------- */
 int     watch_directory_init(struct event_base *evbase, const char *path_name, void (*callback_function)(const char *arg_is_path));
 void    start_watching_dir(main_ctx_t *MAIN_CTX);
 void    watch_sctpc_restart(const char *file_name);
-
-/* ------------------------- overload.c --------------------------- */
-int     NWUCP_OVLD_CHECK(int svc_id, char *oper_str);
-int     NWUCP_OVLD_CHK_NGAP(int proc_code);
-int     NWUCP_OVLD_CHK_EAP(n3iwf_msg_t *n3iwf_msg);
-int     NWUCP_OVLD_CHK_TCP();
-

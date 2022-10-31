@@ -57,14 +57,14 @@ ue_ctx_t *ue_ctx_assign(main_ctx_t *MAIN_CTX)
 	return NULL;
 }
 
-void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
+int ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_assign(MAIN_CTX);
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "{TODO} %s() called null ue_ctx! reply to UP IKE Backoff noti\n", __func__);
-		return;
+		return -1;
 	}
 	memcpy(&ue_ctx->ike_tag, &ike_msg->ike_tag, sizeof(ike_tag_t));
 	memcpy(&ue_ctx->ctx_info, &n3iwf_msg->ctx_info, sizeof(ctx_info_t));
@@ -73,6 +73,8 @@ void ue_assign_by_ike_auth(ike_msg_t *ike_msg)
 	worker_ctx_t *worker_ctx = worker_ctx_get_by_index(ue_ctx->index);
 
 	event_base_once(worker_ctx->evbase_thrd, -1, EV_TIMEOUT, eap_proc_5g_start, ue_ctx, NULL);
+
+	return 0;
 }
 
 ue_ctx_t *ue_ctx_get_by_index(int index, worker_ctx_t *worker_ctx)
@@ -266,7 +268,7 @@ int ue_check_an_param_with_amf(eap_relay_t *eap_5g, json_object *js_guami, json_
 	}
 }
 
-void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
+int ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 {
 	eap_relay_t *eap_5g = &ike_msg->eap_5g;
 
@@ -298,6 +300,8 @@ void ue_set_amf_by_an_param(ike_msg_t *ike_msg)
 	ike_msg->mtype = n3iwf_msg->ctx_info.cp_id % MAIN_CTX->IO_WORKERS.worker_num + 1;
 
 	msgsnd(MAIN_CTX->QID_INFO.eap5g_nwucp_worker_qid, ike_msg, IKE_MSG_SIZE, IPC_NOWAIT);
+
+	return 0;
 }
 
 int ue_check_ngap_id(ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)

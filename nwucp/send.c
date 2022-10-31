@@ -171,7 +171,7 @@ void ike_send_ue_release(ue_ctx_t *ue_ctx)
 	}
 }
 
-void ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
+int ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
 {
 	json_object *js_uplink_nas_transport_message = 
 		create_uplink_nas_transport_json(ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, nas_str, ue_ctx->ike_tag.ue_from_addr, ue_ctx->ike_tag.ue_from_port);
@@ -192,6 +192,8 @@ void ngap_send_uplink_nas(ue_ctx_t *ue_ctx, char *nas_str)
 
 	/* release resource */
 	json_object_put(js_uplink_nas_transport_message);
+
+	return 0;
 }
 
 void tcp_save_downlink_nas(ue_ctx_t *ue_ctx, const char *nas_pdu)

@@ -47,7 +47,7 @@ void ike_proc_ue_release(ue_ctx_t *ue_ctx)
 	ike_send_ue_release(ue_ctx);
 }
 
-void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
+int ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 {
 	eap_relay_t *eap_recv = &ike_msg->eap_5g;
 
@@ -92,13 +92,15 @@ void ngap_proc_initial_ue_message(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 	/* release resource */
 	json_object_put(js_initial_ue_message);
 
-	return;
+	return 0;
 
 NPIUM_ERR:
-	return ue_ctx_unset(ue_ctx);
+	ue_ctx_unset(ue_ctx);
+
+	return -1;
 }
 
-void ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
+int ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 {
 	eap_relay_t *eap_recv = &ike_msg->eap_5g;
 
@@ -114,10 +116,14 @@ void ngap_proc_uplink_nas_transport(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
 
 	fprintf(stderr, "%s() ue [%s],\n\t recv nas_pdu [%s]\n", __func__, UE_TAG(ue_ctx), eap_recv->nas_str);
 
-	return ngap_send_uplink_nas(ue_ctx, ike_msg->eap_5g.nas_str);
+	ngap_send_uplink_nas(ue_ctx, ike_msg->eap_5g.nas_str);
+
+	return 0;
 
 NPUNT_ERR:
-	return ue_ctx_unset(ue_ctx);
+	ue_ctx_unset(ue_ctx);
+
+	return -1;
 }
 
 void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_msg)
@@ -221,7 +227,7 @@ void ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx)
 	event_base_once(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx, NULL);
 }
 
-void nas_relay_to_amf(ike_msg_t *ike_msg)
+int nas_relay_to_amf(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
@@ -229,7 +235,7 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
-		return;
+		return -1;
 	}
 	ue_ctx_stop_timer(ue_ctx);
 
@@ -240,7 +246,8 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 	if (eap_send->eap_id != eap_recv->eap_id) {
 		fprintf(stderr, "TODO %s() ue [%s] check eap_id mismatch send=(%d)/recv=(%d)!\n", 
 				__func__, UE_TAG(ue_ctx), eap_send->eap_id, eap_recv->eap_id);
-		return ue_ctx_unset(ue_ctx);
+		ue_ctx_unset(ue_ctx);
+		return -1;
 	}
 
 	if (eap_5g->an_param.set == RS_AN_PARAM_PROCESS) {
@@ -250,18 +257,20 @@ void nas_relay_to_amf(ike_msg_t *ike_msg)
 	}
 }
 
-void nas_regi_to_amf(ike_msg_t *ike_msg)
+int nas_regi_to_amf(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
-		return;
+		return -1;
 	}
 	ue_ctx_stop_timer(ue_ctx);
 
-	return ngap_proc_initial_context_setup_response(ue_ctx, ike_msg);
+	ngap_proc_initial_context_setup_response(ue_ctx, ike_msg);
+
+	return 0;
 }
 
 void ue_save_sctp_tag(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu, event_caller_t caller)
@@ -279,7 +288,7 @@ void ue_save_sctp_tag(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu, event_call
 	NWUCP_TRACE(ue_ctx, DIR_AMF_TO_ME, js_ngap_pdu, NULL);
 }
 
-void nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
 	if (ue_ctx == NULL) {
@@ -304,33 +313,39 @@ void nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	if (ue_ctx->ipsec_sa_created == 0) {
 		/* Signalling SA not yet created */
-		return eap_proc_5g_nas(ue_ctx, nas_pdu);
+		eap_proc_5g_nas(ue_ctx, nas_pdu);
 	} else {
 		/* Signalling SA already created */
-		return tcp_proc_downlink_nas(ue_ctx, nas_pdu);
+		tcp_proc_downlink_nas(ue_ctx, nas_pdu);
 	}
+
+	return 0;
 
 NRTU_ERR:
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
+
+	return -1;
 }
 
-void ue_context_release(ike_msg_t *ike_msg)
+int ue_context_release(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
-		return;
+		return -1;
 	}
 	ue_ctx_stop_timer(ue_ctx);
 
-	return ngap_proc_ue_context_release_request(ue_ctx);
+	ngap_proc_ue_context_release_request(ue_ctx);
+
+	return 0;
 }
 
-void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
@@ -370,7 +385,7 @@ void ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	eap_proc_final(ue_ctx, true, security_key);
 
-	return;
+	return 0;
 
 URRH_ERR:
 	eap_proc_final(ue_ctx, false, NULL);
@@ -378,9 +393,11 @@ URRH_ERR:
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
+
+	return -1;
 }
 
-void ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
@@ -421,15 +438,17 @@ void ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	ike_proc_pdu_release(ue_ctx, pdu_info);
 
-	return;
+	return 0;
 
 UPRR_ERR:
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
+
+	return -1;
 }
 
-void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
@@ -462,22 +481,24 @@ void ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	ike_proc_pdu_request(ue_ctx, pdu_info);
 
-	return;
+	return 0;
 
 UPSH_ERR:
 	if (ue_ctx != NULL) {
 		ue_ctx_unset(ue_ctx);
 	}
+
+	return -1;
 }
 
-void ue_pdu_setup_res_handle(ike_msg_t *ike_msg)
+int ue_pdu_setup_res_handle(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
-		return;
+		return -1;
 	}
 	ue_ctx_stop_timer(ue_ctx);
 
@@ -488,10 +509,12 @@ void ue_pdu_setup_res_handle(ike_msg_t *ike_msg)
 		pdu_proc_flush_ctx(ue_ctx);
 	}
 
-	return ngap_proc_pdu_session_resource_setup_response(ue_ctx, ike_msg);
+	ngap_proc_pdu_session_resource_setup_response(ue_ctx, ike_msg);
+
+	return 0;
 }
 
-void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
@@ -515,28 +538,32 @@ void ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	ike_proc_ue_release(ue_ctx);
 
-	return;
+	return 0;
 
 UCRH_ERR:
-	return;
+	return -1;
 }
 
-void ue_inform_res_handle(ike_msg_t *ike_msg)
+int ue_inform_res_handle(ike_msg_t *ike_msg)
 {
 	n3iwf_msg_t *n3iwf_msg = &ike_msg->n3iwf_msg;
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(n3iwf_msg->ctx_info.cp_id, WORKER_CTX);
 
 	if (ue_ctx == NULL) {
 		fprintf(stderr, "TODO %s() called null ue_ctx!\n", __func__);
-		return;
+		return -1;
 	}
 	ue_ctx_stop_timer(ue_ctx);
 
 	switch (n3iwf_msg->res_code) {
 		case N3_PDU_DELETE_SUCCESS:
 		case N3_PDU_DELETE_FAILURE:
-			return ngap_proc_pdu_session_resource_release_response(ue_ctx, ike_msg);
+			ngap_proc_pdu_session_resource_release_response(ue_ctx, ike_msg);
+			break;
 		case N3_IPSEC_DELETE_UE_CTX:
-			return ngap_proc_ue_context_release_complete(ue_ctx);
+			ngap_proc_ue_context_release_complete(ue_ctx);
+			break;
 	}
+
+	return 0;
 }

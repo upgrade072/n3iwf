@@ -66,7 +66,7 @@ void amf_ctx_unset(amf_ctx_t *amf_ctx)
 	}
 }
 
-void amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu)
+int amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu)
 {
 	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
 
@@ -74,11 +74,11 @@ void amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_nga
 
 	if (amf_ctx == NULL) {
 		fprintf(stderr, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
-		return;
+		return -1;
 	}
 	if (success != true) {
 		fprintf(stderr, "%s() recv NOK response from amf [%s], will retry!\n", __func__, sctp_tag->hostname);
-		return;
+		return -1;
 	}
 
 	fprintf(stderr, "%s() recv OK response from amf [%s]\n", __func__, sctp_tag->hostname);
@@ -86,9 +86,11 @@ void amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_nga
 	amf_ctx_unset(amf_ctx);
 
 	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
+
+	return 0;
 }
 
-void amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+int amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
 	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
 
@@ -96,7 +98,7 @@ void amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 
 	if (amf_ctx == NULL) {
 		fprintf(stderr, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
-		return;
+		return -1;
 	}
 
 	json_object *js_unavailable_guami_list = ngap_get_unavailable_guami_list(js_ngap_pdu);
@@ -108,5 +110,7 @@ void amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 		amf_ctx_unset(amf_ctx);
 		amf_regi_start(MAIN_CTX, amf_ctx);
 	}
+
+	return 0;
 }
 

@@ -34,30 +34,31 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 		goto HNM_DISCARD;
 	}
 
+	int res = -1;
 	switch (proc_code) 
 	{
 		/* AMF MESSAGE (HANDLE BY MAIN) */
 		case NGAP_AMFStatusIndication:
-			amf_status_ind_handle(ngap_msg, js_ngap_pdu);
+			res = amf_status_ind_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case NGAP_NGSetup:
-			amf_regi_res_handle(ngap_msg, success, js_ngap_pdu);
+			res = amf_regi_res_handle(ngap_msg, success, js_ngap_pdu);
 			break;
 		/* UE MESSAGE (HANDLE BY WORKER) */
 		case NGAP_DownlinkNASTransport:
-			nas_relay_to_ue(ngap_msg, js_ngap_pdu);
+			res = nas_relay_to_ue(ngap_msg, js_ngap_pdu);
 			break;
 		case NGAP_InitialContextSetup:
-			ue_regi_res_handle(ngap_msg, js_ngap_pdu);
+			res = ue_regi_res_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case NGAP_PDUSessionResourceRelease:
-			ue_pdu_release_req_handle(ngap_msg, js_ngap_pdu);
+			res = ue_pdu_release_req_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case NGAP_PDUSessionResourceSetup:
-			ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
+			res = ue_pdu_setup_req_handle(ngap_msg, js_ngap_pdu);
 			break;
 		case NGAP_UEContextRelease:
-			ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
+			res = ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
 			break;
 		default:
 			/* we can't handle, just discard */
@@ -65,6 +66,8 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 					__func__, proc_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name, JS_PRINT_PRETTY(js_ngap_pdu));
 			break;
 	}
+
+	NWUCP_OVLD_CHK_FAIL_NGAP(proc_code, res);
 
 HNM_DISCARD:
 	if (js_ngap_pdu != NULL) {
@@ -94,38 +97,48 @@ void handle_ike_msg(ike_msg_t *ike_msg, event_caller_t caller)
 		return;
 	}
 
+	int res = -1;
 	switch (n3iwf_msg->msg_code)
 	{
 		case N3_IKE_AUTH_REQ:
 			handle_ike_log("N3_IKE_AUTH_REQ", ike_msg, caller);
 			if (n3iwf_msg->res_code == N3_EAP_INIT) {
-				return ue_assign_by_ike_auth(ike_msg);
+				res = ue_assign_by_ike_auth(ike_msg);
+				break;
 			}
 			if (eap_5g->an_param.set == RS_AN_PARAM_SET) {
 				/* main (select amf) --msgsnd--> worker */
-				return ue_set_amf_by_an_param(ike_msg);
+				res = ue_set_amf_by_an_param(ike_msg);
+				break;
 			} else {
-				return nas_relay_to_amf(ike_msg);
+				res = nas_relay_to_amf(ike_msg);
+				break;
 			}
 		case N3_IKE_IPSEC_NOTI:
 			handle_ike_log("N3_IKE_IPSEC_NOTI", ike_msg, caller);
 			if (n3iwf_msg->res_code == N3_IPSEC_UE_DISCONNECT) {
-				return ue_context_release(ike_msg);
+				res = ue_context_release(ike_msg);
+				break;
 			} else {
-				return nas_regi_to_amf(ike_msg);
+				res = nas_regi_to_amf(ike_msg);
+				break;
 			}
 		case N3_IKE_INFORM_RES:
 			handle_ike_log("N3_IKE_INFORM_RES", ike_msg, caller);
-			return ue_inform_res_handle(ike_msg);
+			res = ue_inform_res_handle(ike_msg);
+			break;
 		case N3_CREATE_CHILD_SA_RES:
 			handle_ike_log("N3_CREATE_CHILD_SA_RES", ike_msg, caller);
-			return ue_pdu_setup_res_handle(ike_msg);
+			res = ue_pdu_setup_res_handle(ike_msg);
+			break;
 		default:
 			/* we can't handle, just discard */
 			fprintf(stderr, "%s() recv [Unknown IKE Message=(%d)!] with (%s)\n", 
 					__func__, n3iwf_msg->msg_code, caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
-			return;
+			break;
 	}
+
+	NWUCP_OVLD_CHK_FAIL_EAP(n3iwf_msg, res);
 }
 
 void msg_rcv_from_ngapp(int conn_fd, short events, void *data)
