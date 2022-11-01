@@ -7,7 +7,7 @@ void handle_ngap_log(const char *prefix, ngap_msg_t *ngap_msg, event_caller_t ca
 {
 	sctp_tag_t *sctp_tag = &ngap_msg->sctp_tag;
 
-	ERRLOG(LLE, FL, "\nsctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
+	ERRLOG(LLE, FL, "sctp recv [%s] from [host:%s assoc:%d stream:%d ppid:%d] with (%s)\n",
 			prefix,
 			sctp_tag->hostname, sctp_tag->assoc_id, sctp_tag->stream_id, sctp_tag->ppid, 
 			caller == EC_MAIN ? "main" : WORKER_CTX->thread_name);
@@ -81,7 +81,7 @@ HNM_DISCARD:
 
 void handle_ike_log(const char *prefix, ike_msg_t *ike_msg, event_caller_t caller)
 {
-	ERRLOG(LLE, FL, "\nike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s] with (%s)\n",
+	ERRLOG(LLE, FL, "ike recv [%s] from [ue_ip:%s ue_port:%d up_ip:%s up_port:%d rel_amf:%s] with (%s)\n",
 			prefix,
 			ike_msg->ike_tag.ue_from_addr,
 			ike_msg->ike_tag.ue_from_port,

@@ -7,7 +7,6 @@ CFLAG	+= -DTRC_TIMER -D_NEW_KEEPALIVE -fPIC
 DEFINES	= -DDEBUG #-DRESTRICTED_CLIENT #-DSOREUSEPORT #-DTCPNODELAY
 
 INC_DIR	= -I. -I../../include
-INC_DIR	+= -I../../src/STACK/include
 
 LIB_DIR	= -L../../lib
 LIBS	= -lcomm -lm -lpthreads 

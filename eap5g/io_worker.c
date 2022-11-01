@@ -24,7 +24,7 @@ void handle_udp_request(int fd, short event, void *arg)
 	create_ike_tag(&ike_msg->ike_tag, &recv_buf->from_addr);
 	memcpy(&ike_msg->n3iwf_msg, n3iwf_msg, sizeof(n3iwf_msg_t)); /* for save tag */
 
-	ERRLOG(LLE, FL, "\n(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
+	ERRLOG(LLE, FL, "(%s:%d)=>(%s) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			WORKER_CTX->thread_name,
 			n3_msg_code_str(n3iwf_msg->msg_code),
@@ -48,7 +48,7 @@ void handle_ike_request(ike_msg_t *ike_msg)
 	n3iwf_msg_t *n3iwf_msg = (n3iwf_msg_t *)pdu_buff;
 	memcpy(n3iwf_msg, &ike_msg->n3iwf_msg, sizeof(n3iwf_msg_t));
 
-	ERRLOG(LLE, FL, "\n(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
+	ERRLOG(LLE, FL, "(%s)=>(%s:%d) [%s] [%s] (ue_id=%s up_id=%d cp_id=%d)\n",
 			WORKER_CTX->thread_name,
 			ike_msg->ike_tag.up_from_addr, ike_msg->ike_tag.up_from_port,
 			n3_msg_code_str(n3iwf_msg->msg_code),
