@@ -55,7 +55,7 @@ const char *get_nas5gs_msgid_str(msgid_type_t msg_id)
 size_t encap_eap_req(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_size)
 {
 	if (eap_relay->msg_id != NAS_5GS_START && strlen(eap_relay->nas_str) == 0) {
-		fprintf(stderr, "%s() recv invalid request (nas_str == NULL)!\n", __func__);
+		ERRLOG(LLE, FL, "%s() recv invalid request (nas_str == NULL)!\n", __func__);
 		return 0;
 	}
 	int eap_len = eap_relay->msg_id == NAS_5GS_START ? 14 : 
@@ -97,7 +97,7 @@ size_t encap_eap_req(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffe
 		memcpy(&eap->data[10], &nas_pdu_len, sizeof(nas_pdu_len));
 	}
 
-	fprintf(stderr, "{dbg} %s() send eap=[%s](id:%d)/nas_5gs=[%s]\n", 
+	ERRLOG(LLE, FL, "{dbg} %s() send eap=[%s](id:%d)/nas_5gs=[%s]\n", 
 			__func__, eap_code_str[eap->code], eap->id, nas5gs_msgid_str[eap_relay->msg_id]);
 
 	return eap_len;
@@ -115,7 +115,7 @@ size_t encap_eap_result(eap_relay_t *eap_relay, unsigned char *buffer, size_t bu
 	memcpy(eap->length, &len, sizeof(uint16_t));
 
 	uint8_t message_id = eap->data[0] == EAP_EXPANDED_TYPE ? eap->data[8] : 0;
-	fprintf(stderr, "{dbg} %s() send eap=[%s]/nas_5gs=[%s]\n", 
+	ERRLOG(LLE, FL, "{dbg} %s() send eap=[%s]/nas_5gs=[%s]\n", 
 			__func__, eap_code_str[eap->code], nas5gs_msgid_str[message_id]);
 
 	return eap_len;
@@ -145,13 +145,13 @@ void parse_an_guami(unsigned char *params, size_t len, an_guami_t *guami)
 	guami->amf_pointer = amf_pointer;
 	mem_to_hex(&params[3], 3, guami->amf_id_str);
 
-	fprintf(stderr, "%s() mcc=(0x%s), mnc=(0x%s), amf_id=(%s)\n", 
+	ERRLOG(LLE, FL, "%s() mcc=(0x%s), mnc=(0x%s), amf_id=(%s)\n", 
 			__func__, guami->mcc, guami->mnc, guami->amf_id_str);
 
 	char mccmnc[7] = {0,};
 	sprintf(mccmnc, "%s%s", guami->mcc, guami->mnc);
 	print_bcd_str(mccmnc, guami->plmn_id_bcd, 7);
-	fprintf(stderr, "%s() guami plmn_id_bcd=(0x%s)\n", __func__, guami->plmn_id_bcd);
+	ERRLOG(LLE, FL, "%s() guami plmn_id_bcd=(0x%s)\n", __func__, guami->plmn_id_bcd);
 }
 
 void parse_an_plmn_id(unsigned char *params, size_t len, an_plmn_id_t *plmn_id)
@@ -171,13 +171,13 @@ void parse_an_plmn_id(unsigned char *params, size_t len, an_plmn_id_t *plmn_id)
 	sprintf(plmn_id->mnc, "%X%X%X", mnc_1, mnc_2, mnc_3);
 	}
 
-	fprintf(stderr, "%s() mcc=(0x%s) mnc=(0x%s)\n",
+	ERRLOG(LLE, FL, "%s() mcc=(0x%s) mnc=(0x%s)\n",
 			__func__, plmn_id->mcc, plmn_id->mnc);
 
 	char mccmnc[7] = {0,};
 	sprintf(mccmnc, "%s%s", plmn_id->mcc, plmn_id->mnc);
 	print_bcd_str(mccmnc, plmn_id->plmn_id_bcd, 7);
-	fprintf(stderr, "%s() an plmn_id_bcd=(0x%s)\n", __func__, plmn_id->plmn_id_bcd);
+	ERRLOG(LLE, FL, "%s() an plmn_id_bcd=(0x%s)\n", __func__, plmn_id->plmn_id_bcd);
 }
 
 void parse_an_aec(unsigned char *params, size_t len, an_cause_t *cause)
@@ -187,7 +187,7 @@ void parse_an_aec(unsigned char *params, size_t len, an_cause_t *cause)
 	cause->set = 1;
 	cause->ec = aec;
 	sprintf(cause->cause_str, "%s", establish_cause_str(aec));
-	fprintf(stderr, "%s() aec=(0x%x:%s)\n", __func__, aec, cause->cause_str);
+	ERRLOG(LLE, FL, "%s() aec=(0x%x:%s)\n", __func__, aec, cause->cause_str);
 }
 
 void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
@@ -199,7 +199,7 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 	while (remain >= 2 && nssai->set_num < MAX_AN_NSSAI_NUM) {
 		uint8_t len = params[progress++];
 		if (len != 4) {
-			fprintf(stderr, "{dbg} %s() error, we can only parse SST_SSD type!\n", __func__);
+			ERRLOG(LLE, FL, "{dbg} %s() error, we can only parse SST_SSD type!\n", __func__);
 			return;
 		}
 		uint8_t sst = params[progress];
@@ -208,11 +208,31 @@ void parse_an_nssai(unsigned char *params, size_t total_len, an_nssai_t *nssai)
 
 		nssai->sst[nssai->set_num] = sst;
 		sprintf(nssai->sd_str[nssai->set_num], "%s", sd_str);
-		fprintf(stderr, "%s() sst=(%d) sd=(%s)\n", __func__, nssai->sst[nssai->set_num], nssai->sd_str[nssai->set_num]);
+		ERRLOG(LLE, FL, "%s() sst=(%d) sd=(%s)\n", __func__, nssai->sst[nssai->set_num], nssai->sd_str[nssai->set_num]);
 		nssai->set_num += 1;
 
 		progress += len;
 		remain -= (len + 1);
+	}
+}
+
+const char *an_param_str(int type)
+{
+	switch (type) {
+		case AN_GUAMI:
+			return "Guami";
+		case AN_PLMN_ID:
+			return "Plmn_ID";
+		case AN_NSSAI:
+			return "Nssai";
+		case AN_CAUSE:
+			return "Cause";
+		case AN_NID:
+			return "NID";
+		case AN_UE_ID:
+			return "Ue_ID";
+		default:
+			return "Unknown";
 	}
 }
 
@@ -228,33 +248,26 @@ void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_par
 		remain = remain - tlv_len;
 		progress = progress + tlv_len;
 
-		fprintf(stderr, "%s() T:%d L:%d V:", __func__, an_param_raw->type, an_param_raw->length);
+		ERRLOG(LLE, FL, "%s() T:%d L:%d V:%s\n", __func__, an_param_raw->type, an_param_raw->length, an_param_str(an_param_raw->type));
 
 		switch (an_param_raw->type) {
 			case AN_GUAMI:
-				fprintf(stderr, "Guami\n");
 				parse_an_guami(an_param_raw->value, an_param_raw->length, &an_param->guami);
 				break;
 			case AN_PLMN_ID:
-				fprintf(stderr, "Plmn_ID\n");
 				parse_an_plmn_id(an_param_raw->value, an_param_raw->length, &an_param->plmn_id);
 				break;
 			case AN_NSSAI:
-				fprintf(stderr, "Nssai\n");
 				parse_an_nssai(an_param_raw->value, an_param_raw->length, &an_param->nssai);
 				break;
 			case AN_CAUSE:
-				fprintf(stderr, "Cause\n");
 				parse_an_aec(an_param_raw->value, an_param_raw->length, &an_param->cause);
 				break;
 			case AN_NID:
-				fprintf(stderr, "NID\n");
 				break;
 			case AN_UE_ID:
-				fprintf(stderr, "Ue_ID\n");
 				break;
 			default:
-				fprintf(stderr, "Unknown\n");
 				break;
 		}
 	}
@@ -263,13 +276,13 @@ void parse_an_params(unsigned char *params, size_t total_len, an_param_t *an_par
 void parse_nas_pdu(unsigned char *params, size_t total_len, char *nas_str)
 {
 	mem_to_hex(params, total_len, nas_str);
-	fprintf(stderr, "%s() nas_pdu (len:%ld) [%s]\n", __func__, total_len, nas_str);
+	ERRLOG(LLE, FL, "%s() nas_pdu (len:%ld) [%s]\n", __func__, total_len, nas_str);
 }
 
 void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_size)
 {
 	if (buffer_size < EAP_HEADER_LEN) {
-		fprintf(stderr, "{dbg} %s() with insufficient buffer size!\n", __func__);
+		ERRLOG(LLE, FL, "{dbg} %s() with insufficient buffer size!\n", __func__);
 		return;
 	}
 
@@ -287,13 +300,13 @@ void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_
 		(eap->data[4] != 0x00 || eap->data[5] != 0x00 || eap->data[6] != 0x00 || eap->data[7] != 0x03) ||
 		(message_id != NAS_5GS_NAS && message_id != NAS_5GS_STOP) ||
 		(eap->data[9] != 0x00)) {
-		fprintf(stderr, "{dbg} %s() with invalid eap_res_5g_nas!\n", __func__);
+		ERRLOG(LLE, FL, "{dbg} %s() with invalid eap_res_5g_nas!\n", __func__);
 		return;
 	} else {
 		eap_relay->eap_code = eap->code;
 		eap_relay->eap_id = eap->id;
 		eap_relay->msg_id = message_id;
-		fprintf(stderr, "{dbg} %s() recv eap=[%s](id:%d)/nas_5gs=[%s]\n", 
+		ERRLOG(LLE, FL, "{dbg} %s() recv eap=[%s](id:%d)/nas_5gs=[%s]\n", 
 				__func__, eap_code_str[eap->code], eap->id, nas5gs_msgid_str[message_id]);
 	}
 
@@ -316,10 +329,10 @@ void decap_eap_res(eap_relay_t *eap_relay, unsigned char *buffer, size_t buffer_
 	uint16_t nas_cut_pos = an_cut_pos + 2 + nas_len;
 
 	if (len != (EAP_HEADER_LEN + nas_cut_pos)) {
-		fprintf(stderr, "{dbg} %s() recv invalid an/nas len!\n", __func__);
+		ERRLOG(LLE, FL, "{dbg} %s() recv invalid an/nas len!\n", __func__);
 		return;
 	}
-	fprintf(stderr, "{dbg} %s() check len an=(%d) nas=(%d)\n", __func__, an_len, nas_len);
+	ERRLOG(LLE, FL, "{dbg} %s() check len an=(%d) nas=(%d)\n", __func__, an_len, nas_len);
 
 	/* parse an_params */
 	parse_an_params(an_params, an_len, &eap_relay->an_param);

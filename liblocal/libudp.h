@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <loglib.h>
 
 /* ------------------------- libudp.c --------------------------- */
 int     create_udp_sock(int port);

@@ -47,7 +47,7 @@ int cnvt_cfg_to_json(json_object *obj, config_setting_t *setting, int callerType
             }
             break;
         default:
-            fprintf(stderr, "TODO| do something!\n");
+            ERRLOG(LLE, FL, "TODO| do something!\n");
             break;
     }
 

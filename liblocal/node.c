@@ -165,7 +165,7 @@ void link_node_delete_all(linked_list *list, void (*cbfunc_with_node_data)())
 link_node *link_node_assign_key_order(linked_list *list, const char *key, size_t alloc_size)
 {
 	if (strlen(key) > LN_MAX_KEY_VAL) {
-		fprintf(stderr, "%s() key_len=(%ld) exceed max=(%d)\n", __func__, strlen(key), LN_MAX_KEY_VAL);
+		ERRLOG(LLE, FL, "%s() key_len=(%ld) exceed max=(%d)\n", __func__, strlen(key), LN_MAX_KEY_VAL);
 		return NULL;
 	}
 

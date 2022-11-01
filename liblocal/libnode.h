@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <loglib.h>
+
 #define LN_MAX_KEY_VAL 128
 typedef struct link_node {
 	struct link_node *prev;

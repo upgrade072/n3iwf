@@ -14,16 +14,16 @@ void util_print_msgq_info(int key, int msqid)
 {
 	struct msqid_ds m_stat = {{0,}};
 
-	fprintf(stderr, "---------- messege queue info -------------\n");
+	ERRLOG(LLE, FL, "---------- messege queue info -------------\n");
 	if (msgctl(msqid, IPC_STAT, &m_stat)== -1) {
-		fprintf(stderr, "msgctl failed (key=0x%x:msgqid=%d) [%d:%s]\n", key, msqid, errno, strerror(errno));
+		ERRLOG(LLE, FL, "msgctl failed (key=0x%x:msgqid=%d) [%d:%s]\n", key, msqid, errno, strerror(errno));
 		return;
 	}
-	fprintf(stderr, " queue key : 0x%x\n", key);
-	fprintf(stderr, " msg_lspid : %d\n",  m_stat.msg_lspid);
-	fprintf(stderr, " msg_qnum  : %lu\n", m_stat.msg_qnum);
-	fprintf(stderr, " msg_stime : %lu\n", m_stat.msg_stime);
-	fprintf(stderr, "-------------------------------------------\n");
+	ERRLOG(LLE, FL, " queue key : 0x%x\n", key);
+	ERRLOG(LLE, FL, " msg_lspid : %d\n",  m_stat.msg_lspid);
+	ERRLOG(LLE, FL, " msg_qnum  : %lu\n", m_stat.msg_qnum);
+	ERRLOG(LLE, FL, " msg_stime : %lu\n", m_stat.msg_stime);
+	ERRLOG(LLE, FL, "-------------------------------------------\n");
 }
 
 int util_get_queue_info(int key, const char *prefix)
@@ -31,11 +31,11 @@ int util_get_queue_info(int key, const char *prefix)
 	int msgq_id = 0;
 
 	if (key <= 0 || ((msgq_id = msgget(key, IPC_CREAT | 0666)) < 0)) {
-		fprintf(stderr, "%s() fail to create msgq [%s:key=(%d)]\n", __func__, prefix, key);
+		ERRLOG(LLE, FL, "%s() fail to create msgq [%s:key=(%d)]\n", __func__, prefix, key);
 		return -1;
 	}
 
-	fprintf(stderr, "[%s] msgq_id=(%d)\n", prefix, msgq_id);
+	ERRLOG(LLE, FL, "[%s] msgq_id=(%d)\n", prefix, msgq_id);
 	util_print_msgq_info(key, msgq_id);
 	return msgq_id;
 }
@@ -45,7 +45,7 @@ void *util_get_shm(int key, size_t size, const char *prefix)
 	int shm_id = 0;
 
 	if (key <= 0 || ((shm_id = shmget(key, size, IPC_CREAT|0666)) < 0)) {
-		fprintf(stderr, "%s() fail to create shm [%s:key=(%d)]\n", __func__, prefix, key);
+		ERRLOG(LLE, FL, "%s() fail to create shm [%s:key=(%d)]\n", __func__, prefix, key);
 		return NULL;
 	}
 
@@ -112,7 +112,7 @@ int util_set_keepalive(int fd, int keepalive, int cnt, int idle, int intvl)
 void print_byte_bin(unsigned char value, char *ptr, size_t size)
 {
     if (size % 8 != 1) {
-        fprintf(stderr, "size wrong [need %%8 + 1]\n");
+        ERRLOG(LLE, FL, "size wrong [need %%8 + 1]\n");
         return;
     }
     int digit_cnt = 0;
@@ -132,7 +132,7 @@ void print_bcd_str(const char *input, char *output, size_t size)
 {
     int len = strlen(input);
     if (size < (len + 1)) {
-        fprintf(stderr, "size wrong [need %d + 1]\n", len);
+        ERRLOG(LLE, FL, "size wrong [need %d + 1]\n", len);
         return;
     }
     for (int i = 0; i < len; i ++) {
@@ -146,7 +146,7 @@ unsigned char *file_to_buffer(char *filename, const char *mode, size_t *handle_s
 {
     FILE *fp = fopen(filename, mode);
     if (fp == NULL) {
-        fprintf(stderr, "[%s] can't read file=[%s]!\n", __func__, filename);
+        ERRLOG(LLE, FL, "[%s] can't read file=[%s]!\n", __func__, filename);
         return NULL;
     }
 
@@ -223,7 +223,7 @@ void hex_to_bin(char *input, char *output)
 			case 'D': case 'd':bin_val = bin_str[0xd]; break;
 			case 'E': case 'e':bin_val = bin_str[0xe]; break;
 			case 'F': case 'f':bin_val = bin_str[0xf]; break;
-			default: fprintf(stderr, "err) unknown hex=(%c)\n", hex_str); break;
+			default: ERRLOG(LLE, FL, "err) unknown hex=(%c)\n", hex_str); break;
 		}
 		sprintf(output + strlen(output), "%s", bin_val);
 	}
@@ -324,7 +324,7 @@ int ipaddr_range_calc(char *start, char *end)
 	int ip_addr_end = htonl(ip_b.s_addr);
 
 	int ip_count = ip_addr_end - ip_addr_start;
-	//fprintf(stderr, "%s(%d) - %s(%d) = range count(%d)\n", end, ip_addr_end, start, ip_addr_start, ip_count);
+	//ERRLOG(LLE, FL, "%s(%d) - %s(%d) = range count(%d)\n", end, ip_addr_end, start, ip_addr_start, ip_count);
 
 	return ip_count;
 }
@@ -340,18 +340,18 @@ int ipaddr_sample()
 	char *ip_range = "10.0.0.0 ~ 10.0.0.100";
 	char ip_start[256] = {0,}, ip_end[256] = {0,};
 	int ret = ipaddr_range_scan(ip_range, ip_start, ip_end);
-	fprintf(stderr, "ret=[%d] range=(%s) start=(%s) end=(%s)\n", ret, ip_range, ip_start, ip_end);
+	ERRLOG(LLE, FL, "ret=[%d] range=(%s) start=(%s) end=(%s)\n", ret, ip_range, ip_start, ip_end);
 
 	int num_of_addr = ipaddr_range_calc(ip_start, ip_end);
 
 	char *ip_list = strdup(ip_start);
 	for (int i = 0; i < num_of_addr; i++) {
-		fprintf(stderr, "%s\n", ip_list);
+		ERRLOG(LLE, FL, "%s\n", ip_list);
 		ip_list = ipaddr_increaser(ip_list);
 	}
 	free(ip_list);
 
-	fprintf(stderr, "num_of_addr=(%d)\n", num_of_addr);
+	ERRLOG(LLE, FL, "num_of_addr=(%d)\n", num_of_addr);
 
 	return 0;
 }

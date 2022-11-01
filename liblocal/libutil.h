@@ -14,6 +14,7 @@
 #include <sys/uio.h>
 #include <arpa/inet.h>
 #include <ctype.h>
+#include <loglib.h>
 
 /* ------------------------- util.c --------------------------- */
 void    util_shell_cmd_apply(char *command, char *res, size_t res_size);

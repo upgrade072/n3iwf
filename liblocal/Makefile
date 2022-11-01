@@ -1,6 +1,6 @@
 include ../MakeVars
 
-BUILD_INC_PATH	= -I./ -I../build/include -I../../../include -I../build/include/libxml2 -I../build/share/asn1c
+BUILD_INC_PATH	= -I./ -I../build/include -I../../../include -I../build/include/libxml2 -I../build/share/asn1c -I../PKG/MP/include
 BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= 
 

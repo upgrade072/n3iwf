@@ -6,6 +6,7 @@
 #include <libutil.h>
 
 #include <eap.h>
+#include <loglib.h>
 
 /* ----------- EAP5G <--> NWUCP ------------------------------------------ */
 

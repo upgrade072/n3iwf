@@ -135,7 +135,7 @@ void ngap_proc_initial_context_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *ike_m
 
 	json_object *js_initial_context_setup_response_message = 
 		create_initial_context_setup_response_json(
-				n3iwf_msg->res_code == N3_IPSEC_CREATE_SUCCESS ? "successfulOutcome" : "UnSuccessfulOutcome", 
+				n3iwf_msg->res_code == N3_IPSEC_CREATE_SUCCESS ? "successfulOutcome" : "UnsuccessfulOutcome", 
 				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id);
 
 	/* start timer */
@@ -158,7 +158,7 @@ void ngap_proc_pdu_session_resource_release_response(ue_ctx_t *ue_ctx, ike_msg_t
 
 	json_object *js_pdu_session_resouce_release_response = 
 		create_pdu_session_resource_release_response_json(
-				n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? "successfulOutcome" : "UnSuccessfulOutcome", 
+				n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? "successfulOutcome" : "UnsuccessfulOutcome", 
 				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, pdu_info);
 
 	ue_ctx_transit_state(ue_ctx, n3iwf_msg->res_code == N3_PDU_DELETE_SUCCESS ? 
@@ -186,7 +186,7 @@ void ngap_proc_pdu_session_resource_setup_response(ue_ctx_t *ue_ctx, ike_msg_t *
 
 	json_object *js_pdu_session_resouce_setup_response = 
 		create_pdu_session_resource_setup_response_json(
-				n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS ? "successfulOutcome" : "UnSuccessfulOutcome", 
+				n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS ? "successfulOutcome" : "UnsuccessfulOutcome", 
 				ue_ctx->amf_tag.amf_ue_id, ue_ctx->amf_tag.ran_ue_id, pdu_info);
 
 	ue_ctx_transit_state(ue_ctx, n3iwf_msg->res_code == N3_PDU_CREATE_SUCCESS ? 
@@ -225,6 +225,34 @@ void ngap_proc_ue_context_release_complete(ue_ctx_t *ue_ctx)
 
 	/* final release ue ctx */
 	event_base_once(WORKER_CTX->evbase_thrd, -1, EV_TIMEOUT, ue_ctx_release, ue_ctx, NULL);
+}
+
+void ngap_proc_ng_reset(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+{
+	uint32_t amf_ue_ngap_id = ngap_get_amf_ue_ngap_id(js_ngap_pdu);
+	uint32_t ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
+
+	json_object *js_ng_reset = create_ng_reset_json(amf_ue_ngap_id, ran_ue_ngap_id);
+
+	/* send to amf */
+	ngap_send_json(ngap_msg->sctp_tag.hostname, NULL, js_ng_reset);
+
+	/* release resource */
+	json_object_put(js_ng_reset);
+}
+
+void ngap_proc_error_indication(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
+{
+	uint32_t amf_ue_ngap_id = ngap_get_amf_ue_ngap_id(js_ngap_pdu);
+	uint32_t ran_ue_ngap_id = ngap_get_ran_ue_ngap_id(js_ngap_pdu);
+
+	json_object *js_error_indication = create_error_indication_json(amf_ue_ngap_id, ran_ue_ngap_id);
+
+	/* send to amf */
+	ngap_send_json(ngap_msg->sctp_tag.hostname, NULL, js_error_indication);
+
+	/* release resource */
+	json_object_put(js_error_indication);
 }
 
 int nas_relay_to_amf(ike_msg_t *ike_msg)
@@ -292,7 +320,8 @@ int nas_relay_to_ue(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
 	ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
 	if (ue_ctx == NULL) {
-		ERRLOG(LLE, FL, "TODO %s() called null ue_ctx!\n", __func__);
+		ERRLOG(LLE, FL, "%s() called null ue_ctx!\n", __func__);
+		ngap_proc_ng_reset(ngap_msg, js_ngap_pdu);
 		goto NRTU_ERR;
 	}
 
@@ -349,7 +378,8 @@ int ue_regi_res_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-		ERRLOG(LLE, FL, "TODO %s() called null ue_ctx!\n", __func__);
+		ERRLOG(LLE, FL, "%s() called null ue_ctx!\n", __func__);
+		ngap_proc_ng_reset(ngap_msg, js_ngap_pdu);
         goto URRH_ERR;
 	}
     
@@ -401,7 +431,8 @@ int ue_pdu_release_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-		ERRLOG(LLE, FL, "TODO %s() called null ue_ctx!\n", __func__);
+		ERRLOG(LLE, FL, "%s() called null ue_ctx!\n", __func__);
+		ngap_proc_ng_reset(ngap_msg, js_ngap_pdu);
         goto UPRR_ERR;
 	}
     
@@ -452,7 +483,8 @@ int ue_pdu_setup_req_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-		ERRLOG(LLE, FL, "TODO %s() called null ue_ctx!\n", __func__);
+		ERRLOG(LLE, FL, "%s() called null ue_ctx!\n", __func__);
+		ngap_proc_ng_reset(ngap_msg, js_ngap_pdu);
         goto UPSH_ERR;
 	}
 
@@ -518,7 +550,8 @@ int ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)
 {
     ue_ctx_t *ue_ctx = ue_ctx_get_by_index(ngap_msg->ngap_tag.id, WORKER_CTX);
     if (ue_ctx == NULL) {
-		ERRLOG(LLE, FL, "TODO %s() called null ue_ctx!\n", __func__);
+		ERRLOG(LLE, FL, "%s() called null ue_ctx!\n", __func__);
+		ngap_proc_ng_reset(ngap_msg, js_ngap_pdu);
         goto UCRH_ERR;
 	}
 

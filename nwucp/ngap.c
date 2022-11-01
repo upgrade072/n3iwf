@@ -9,7 +9,9 @@ void ngap_send_json(char *hostname, ue_ctx_t *ue_ctx, json_object *js_ngap_pdu)
 	ngap_msg->sctp_tag.ppid = SCTP_PPID_NGAP;
 	ngap_msg->msg_size = sprintf(ngap_msg->msg_body, "%s", JS_PRINT_COMPACT(js_ngap_pdu));
 
-	NWUCP_TRACE(ue_ctx, DIR_ME_TO_AMF, js_ngap_pdu, NULL);
+	if (ue_ctx != NULL) {
+		NWUCP_TRACE(ue_ctx, DIR_ME_TO_AMF, js_ngap_pdu, NULL);
+	}
 
 	int res = msgsnd(MAIN_CTX->QID_INFO.nwucp_ngapp_qid, ngap_msg, NGAP_MSG_SIZE(ngap_msg), IPC_NOWAIT);
 	if (res < 0) {
@@ -98,7 +100,7 @@ json_object *create_pdu_session_resource_release_response_json(const char *resul
 	free(msg_ptr);
 
 	/* if fail result, no more body need */
-	if (!strcmp(result, "UnSuccessfulOutcome")) {
+	if (!strcmp(result, "UnsuccessfulOutcome")) {
 		return js_pdu_session_resource_release_response_message;
 	}
 
@@ -133,7 +135,7 @@ json_object *create_pdu_session_resource_setup_response_json(const char *result,
 	free(msg_ptr);
 
 	/* if fail result, no more body need */
-	if (!strcmp(result, "UnSuccessfulOutcome")) {
+	if (!strcmp(result, "UnsuccessfulOutcome")) {
 		return js_pdu_session_resource_setup_response_message;
 	}
 
@@ -229,4 +231,28 @@ json_object *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_
 	}
 
 	return js_ue_context_release_complete_message;
+}
+
+#define NGReset_JSON "{\"initiatingMessage\":{\"procedureCode\":20,\"criticality\":\"reject\",\"value\":{\"protocolIEs\":[{\"id\":15,\"criticality\":\"ignore\",\"value\":{\"misc\":\"unspecified\"}},{\"id\":88,\"criticality\":\"reject\",\"value\":{\"partOfNG-Interface\":[{\"aMF-UE-NGAP-ID\":%u},{\"rAN-UE-NGAP-ID\":%u}]}}]}}}"
+json_object *create_ng_reset_json(uint32_t amf_ue_id, uint32_t ran_ue_id)
+{
+	/* make NGReset */
+	char *ptr = NULL;
+	asprintf(&ptr, NGReset_JSON, amf_ue_id, ran_ue_id);
+    json_object *js_ng_reset_message = json_tokener_parse(ptr);
+    free(ptr);
+
+	return js_ng_reset_message;
+}
+
+#define ErrorIndication_JSON "{\"initiatingMessage\":{\"procedureCode\":9,\"criticality\":\"ignore\",\"value\":{\"protocolIEs\":[{\"id\":10,\"criticality\":\"ignore\",\"value\":%u},{\"id\":85,\"criticality\":\"reject\",\"value\":%u},{\"id\":15,\"criticality\":\"ignore\",\"value\":{\"radioNetwork\":\"unknown-local-UE-NGAP-ID\"}}]}}}"
+json_object *create_error_indication_json(uint32_t amf_ue_id, uint32_t ran_ue_id)
+{
+	/* make ErrorIndication */
+	char *ptr = NULL;
+	asprintf(&ptr, ErrorIndication_JSON, amf_ue_id, ran_ue_id);
+    json_object *js_error_indication_message = json_tokener_parse(ptr);
+    free(ptr);
+
+	return js_error_indication_message;
 }

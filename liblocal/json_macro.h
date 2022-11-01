@@ -7,6 +7,7 @@
 #include <libconfig.h>
 #include <json-c/json.h>
 #include <json-c/json_object.h>
+#include <loglib.h>
 #define JS_SEARCH_OBJ(json,key) search_json_object(json,key)
 #define JS_SEARCH_STR(json,key) json_object_get_string(search_json_object(json,key))
 #define JS_SEARCH_INT(json,key) json_object_get_int(search_json_object(json,key))

@@ -60,6 +60,10 @@ void handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller)
 		case NGAP_UEContextRelease:
 			res = ue_ctx_release_handle(ngap_msg, js_ngap_pdu);
 			break;
+		case NGAP_ErrorIndication:
+			break;
+		case NGAP_NGReset:
+			break;
 		default:
 			/* we can't handle, just discard */
 			ERRLOG(LLE, FL, "%s() recv [Unknown NGAP Message=(%d)!] with (%s)\n%s\n", 

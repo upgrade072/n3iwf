@@ -10,7 +10,7 @@ int create_udp_sock(int port)
 
     int sockopt_flag = 1;
     if (setsockopt(udp_sock, SOL_SOCKET, SO_REUSEADDR, &sockopt_flag, sizeof(int)) < 0) {
-        fprintf(stderr, "%s() fail to setsockopt!\n", __func__);
+        ERRLOG(LLE, FL, "%s() fail to setsockopt!\n", __func__);
         exit(0);
     }
 
@@ -20,7 +20,7 @@ int create_udp_sock(int port)
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
     if (bind(udp_sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-        fprintf(stderr, "%s() fail to bindaddr (port=:%d)!\n", __func__, port);
+        ERRLOG(LLE, FL, "%s() fail to bindaddr (port=:%d)!\n", __func__, port);
         exit(0);
     }
 
