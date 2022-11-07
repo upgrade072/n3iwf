@@ -1,4 +1,4 @@
-SUBDIRS := libsrc/COMM libsrc/MSGTRCLIB libsrc/MMCLIB
+SUBDIRS := libsrc/COMM libsrc/MSGTRCLIB libsrc/MMCLIB src/OLCD
 
 subdirs: $(SUBDIRS)
 

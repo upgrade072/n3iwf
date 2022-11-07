@@ -23,9 +23,9 @@ int NWUCP_OVLD_CHK_NGAP(int proc_code)
 	switch (proc_code)
 	{
 		case NGAP_DownlinkNASTransport:
-			return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_NGAP, "DOWNLINK_NAS_TRANS");
+			return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_NGAP, "DN_NAS_TRANS");
 		case NGAP_InitialContextSetup:
-			return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_NGAP, "INITIAL_CTX_SETUP");
+			return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_NGAP, "INIT_CTX_SETUP");
 		case NGAP_PDUSessionResourceSetup:
 			return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_NGAP, "PDU_SESS_SETUP");
 		default:
@@ -71,7 +71,7 @@ void NWUCP_OVLD_CHK_FAIL_EAP(n3iwf_msg_t *n3iwf_msg, int res)
 
 int NWUCP_OVLD_CHK_TCP()
 {
-	return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_TCP, "UPLINK_NAS_TRANS");
+	return NWUCP_OVLD_CHECK(OVLD_CTRL_SVC_TCP, "UL_NAS_TRANS");
 }
 
 void NWUCP_OVLD_CHK_FAIL_TCP()
