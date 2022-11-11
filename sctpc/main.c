@@ -96,6 +96,14 @@ int initialize(main_ctx_t *MAIN_CTX)
 		ERRLOG(LLE, FL, "[%s.%d] keepalivelib_init() Error\n", FL);
 		return -1;
 	}
+	if (msgtrclib_init() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] msgtrclib_init() Error\n", FL);
+		return -1;
+	}
+	if (initMmc() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] initMMc() Error\n", FL);
+		return -1;
+	}
 
 	/* check sctp support */
 	int sctp_test = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
@@ -167,7 +175,7 @@ int initialize(main_ctx_t *MAIN_CTX)
 
 	/* init connection list */
 	init_conn_list(MAIN_CTX);
-	disp_conn_list(MAIN_CTX);
+	disp_conn_list(MAIN_CTX, NULL);
 
 	/* create io workers */
 	config_lookup_int(&MAIN_CTX->CFG, "process_config.io_worker_num", &MAIN_CTX->IO_WORKERS.worker_num);
@@ -188,7 +196,7 @@ void main_tick(evutil_socket_t fd, short events, void *data)
 {
 	keepalivelib_increase();
 
-	disp_conn_list(MAIN_CTX);
+	disp_conn_list(MAIN_CTX, NULL);
 	disp_conn_stat(MAIN_CTX);
 }
 
@@ -197,17 +205,18 @@ void main_msgq_read_callback(evutil_socket_t fd, short events, void *data)
 	main_ctx_t *MAIN_CTX = (main_ctx_t *)data;
 
 	char recv_buffer[1024*64];
-	GeneralQMsgType *msg = (GeneralQMsgType *)recv_buffer;
+	GeneralQMsgType *rcv_msg = (GeneralQMsgType *)recv_buffer;
 	int recv_size = 0;
 
-	while ((recv_size = msgrcv(MAIN_CTX->QID_INFO.main_qid, msg, sizeof(recv_buffer), 0, IPC_NOWAIT)) >= 0) {
-		switch(msg->mtype) {
+	while ((recv_size = msgrcv(MAIN_CTX->QID_INFO.main_qid, rcv_msg, sizeof(recv_buffer), 0, IPC_NOWAIT)) >= 0) {
+		switch(rcv_msg->mtype) {
 			case MTYPE_SETPRINT:
 				continue;
 			case MTYPE_MMC_REQUEST:
+				handleMMCReq((IxpcQMsgType *)rcv_msg->body);
 				continue;
 			case MTYPE_STATISTICS_REQUEST:
-				send_conn_stat(MAIN_CTX, (IxpcQMsgType *)msg->body);
+				send_conn_stat(MAIN_CTX, (IxpcQMsgType *)rcv_msg->body);
 				continue;
 			default:
 				continue;
@@ -230,8 +239,11 @@ int main()
 		system(cmd);
 	}
 
+    struct timeval ten_sec = {10, 0};
+    struct event *ev_tick_ten = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_10_tick, NULL);
+
     struct timeval one_sec = {1, 0};
-    struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
+    struct event *ev_tick_one = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_01_tick, NULL);
     event_add(ev_tick, &one_sec);
 
 	struct timeval one_u_sec = {0,1};

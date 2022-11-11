@@ -157,6 +157,22 @@ typedef struct main_ctx_t {
 	linked_list SCTP_STAT;			// SUM by conn_name
 } main_ctx_t;
 
+/* ------------------------- io_worker.c --------------------------- */
+void    sock_write(int conn_fd, short events, void *data);
+void    handle_sock_send(int conn_fd, short events, void *data);
+void    relay_msg_to_ppid(sctp_msg_t *send_msg);
+void    handle_sock_recv(int conn_fd, short events, void *data);
+void    clear_connection(conn_status_t *conn_status);
+conn_status_t   *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg);
+void    check_path_state(sctp_client_t *client);
+void    clear_or_reconnect(sctp_client_t *client, worker_ctx_t *worker_ctx);
+void    check_connection(worker_ctx_t *worker_ctx);
+void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client);
+void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
+void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
+void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
+void    *io_worker_thread(void *arg);
+
 /* ------------------------- stack.c --------------------------- */
 int     sctp_noti_assoc_change(struct sctp_assoc_change *sac, const char **event_state);
 int     sctp_noti_peer_addr_change(struct sctp_paddr_change *spc, const char **event_state);
@@ -170,7 +186,7 @@ void    print_assoc_stats(const char *prefix, struct sctp_assoc_stats *stats);
 /* ------------------------- list.c --------------------------- */
 conn_curr_t     *take_conn_list(main_ctx_t *MAIN_CTX);
 int     sort_conn_list(const void *a, const void *b);
-void    disp_conn_list(main_ctx_t *MAIN_CTX);
+void    disp_conn_list(main_ctx_t *MAIN_CTX, char *print_buff);
 void    init_conn_list(main_ctx_t *MAIN_CTX);
 void    disp_conn_stat(main_ctx_t *MAIN_CTX);
 void    send_conn_stat(main_ctx_t *MAIN_CTX, IxpcQMsgType *rxIxpcMsg);
@@ -191,18 +207,9 @@ void    main_tick(evutil_socket_t fd, short events, void *data);
 void    main_msgq_read_callback(evutil_socket_t fd, short events, void *data);
 int     main();
 
-/* ------------------------- io_worker.c --------------------------- */
-void    sock_write(int conn_fd, short events, void *data);
-void    handle_sock_send(int conn_fd, short events, void *data);
-void    relay_msg_to_ppid(sctp_msg_t *send_msg);
-void    handle_sock_recv(int conn_fd, short events, void *data);
-void    clear_connection(conn_status_t *conn_status);
-conn_status_t   *search_connection(sctp_client_t *client, sctp_msg_t *sctp_msg);
-void    check_path_state(sctp_client_t *client);
-void    clear_or_reconnect(sctp_client_t *client, worker_ctx_t *worker_ctx);
-void    check_connection(worker_ctx_t *worker_ctx);
-void    client_new(conn_status_t *conn_status, worker_ctx_t *worker_ctx, sctp_client_t *client);
-void    create_client(worker_ctx_t *worker_ctx, conn_info_t *conn);
-void    io_worker_init(worker_ctx_t *worker_ctx, main_ctx_t *MAIN_CTX);
-void    io_thrd_tick(evutil_socket_t fd, short events, void *data);
-void    *io_worker_thread(void *arg);
+/* ------------------------- mmc.c --------------------------- */
+int     initMmc();
+void    handleMMCReq (IxpcQMsgType *rxIxpcMsg);
+int     mmcHdlrVector_qsortCmp (const void *a, const void *b);
+int     mmcHdlrVector_bsrchCmp (const void *a, const void *b);
+int     dis_sctpc_status(IxpcQMsgType *rxIxpcMsg);

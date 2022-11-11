@@ -5,6 +5,7 @@ BUILD_LIBS_PATH	= ../build/lib
 BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  $(BUILD_LIBS_PATH)/libnode.a \
 				  $(BUILD_LIBS_PATH)/libconfig.a \
+				  $(BUILD_LIBS_PATH)/libfort.a \
 				  $(BUILD_LIBS_PATH)/libjson-c.a \
 				  $(BUILD_LIBS_PATH)/json_macro.a \
 				  $(BUILD_LIBS_PATH)/libngapp.a \
@@ -16,7 +17,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  ../PKG/MP/lib/libmmc.a \
 				  -lpthread -lrt -lm -ldl -g
 
-SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c trace.c overload.c
+SRCS			= main.c amf.c ue.c ngap.c tcp.c io_worker.c handler.c send.c parse.c pdu.c watch.c trace.c overload.c mmc.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= nwucp
 DEST			= ../BIN

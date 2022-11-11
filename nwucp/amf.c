@@ -30,9 +30,7 @@ void amf_regi(int conn_fd, short events, void *data)
 {
 	amf_ctx_t *amf_ctx = (amf_ctx_t *)data;
 
-	if (amf_ctx->ng_setup_status > 0) {
-		return;
-	}
+	amf_ctx->ng_setup_status = AMF_NO_RESP;
 
 	ERRLOG(LLE, FL, "%s() try [NGSetupRequest] to amf [%s]\n", __func__, amf_ctx->hostname);
 
@@ -74,20 +72,33 @@ int amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap
 
 	if (amf_ctx == NULL) {
 		ERRLOG(LLE, FL, "%s() can't find amf [%s]!\n", __func__, sctp_tag->hostname);
-		return -1;
+		goto ARRH_ERR;
+	} else {
+		time_t curr_tm = time(NULL);
+		sprintf(amf_ctx->amf_regi_tm, "%.19s", ctime(&curr_tm));
 	}
+
 	if (success != true) {
 		ERRLOG(LLE, FL, "%s() recv NOK response from amf [%s], will retry!\n", __func__, sctp_tag->hostname);
-		return -1;
+		goto ARRH_ERR;
 	}
 
 	ERRLOG(LLE, FL, "%s() recv OK response from amf [%s]\n", __func__, sctp_tag->hostname);
 
 	amf_ctx_unset(amf_ctx);
 
+	amf_ctx->ng_setup_status = AMF_RESP_SUCCESS;
+
 	json_object_deep_copy(js_ngap_pdu, &amf_ctx->js_amf_data, NULL);
 
 	return 0;
+
+ARRH_ERR:
+	if (amf_ctx != NULL) {
+		amf_ctx->ng_setup_status = AMF_RESP_UNSUCCESS;
+	}
+
+	return -1;
 }
 
 int amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu)

@@ -24,6 +24,7 @@
 #include <json_macro.h>
 #include <ngap_intf.h>
 #include <libngapp.h>
+#include <fort.h>
 
 #include <eap_intf.h>
 
@@ -45,6 +46,12 @@ typedef struct nas_envelop_t {
 
 /*--------------------------------------------------------------*/
 
+typedef struct mmc_temp_mem_t {
+	char				ue_id[MAX_TRC_LEN+1];
+	IxpcQMsgHeadType	head;
+	MMLReqMsgType		body;
+} mmc_temp_mem_t;
+
 typedef enum event_caller_t {
 	EC_MAIN = 0,
 	EC_WORKER
@@ -62,6 +69,12 @@ typedef enum trace_type_t {
 	DIR_AMF_TO_ME		= 2,
 	DIR_ME_TO_AMF		= 3
 } trace_type_t;
+
+typedef enum amf_regi_status_t {
+	AMF_NO_RESP			= 0,
+	AMF_RESP_UNSUCCESS	= 1,
+	AMF_RESP_SUCCESS	= 2
+} amf_regi_status_t;
 
 typedef struct amf_ctx_t {
 	char		  hostname[128];
@@ -135,6 +148,7 @@ typedef struct ue_info_t {
 } ue_info_t;
 
 typedef struct qid_info_t {
+	int main_qid;
 	int ngapp_nwucp_qid;
 	int nwucp_ngapp_qid;
 	int eap5g_nwucp_qid;
@@ -184,23 +198,31 @@ int     TRACE_MAKE_MSG_HEAD(ue_ctx_t *ue_ctx, int direction, const char *PROC_ST
 size_t  TRACE_MAKE_MSG_BODY(char *body, const char *raw_msg);
 
 /* ------------------------- parse.c --------------------------- */
+json_object     *ngap_get_allowed_nssai(json_object *js_ngap_pdu);
+const   char *ngap_get_amf_name(json_object *js_ngap_pdu);
 int64_t ngap_get_amf_ue_ngap_id(json_object *js_ngap_pdu);
-int64_t ngap_get_ran_ue_ngap_id(json_object *js_ngap_pdu);
+const   char *ngap_get_ctx_rel_cause(json_object *js_ngap_pdu);
+json_object     *ngap_get_guami(json_object *js_ngap_pdu);
+const   char *ngap_get_masked_imeisv(json_object *js_ngap_pdu);
 const   char *ngap_get_nas_pdu(json_object *js_ngap_pdu);
+json_object     *ngap_get_plmn_support_list(json_object *js_ngap_pdu);
+int64_t ngap_get_ran_ue_ngap_id(json_object *js_ngap_pdu);
+int64_t ngap_get_relative_amf_capacity(json_object *js_ngap_pdu);
 const   char *ngap_get_security_key(json_object *js_ngap_pdu);
+json_object     *ngap_get_served_gaumi_list(json_object *js_ngap_pdu);
+int64_t ngap_get_ctx_rel_amf_ue_ngap_id(json_object *js_ngap_pdu);
+int64_t ngap_get_ctx_rel_ran_ue_ngap_id(json_object *js_ngap_pdu);
+json_object     *ngap_get_ue_security_capabilities(json_object *js_ngap_pdu);
+json_object     *ngap_get_unavailable_guami_list(json_object *js_ngap_pdu);
+int64_t ngap_get_pdu_sess_ambr_dl(json_object *js_pdu_sess_elem);
+int64_t ngap_get_pdu_sess_ambr_ul(json_object *js_pdu_sess_elem);
+const   char *ngap_get_pdu_sess_type(json_object *js_pdu_sess_elem);
+json_object     *ngap_get_pdu_qos_flow_ids(json_object *js_pdu_sess_elem);
+const   char *ngap_get_pdu_gtp_te_addr(json_object *js_pdu_sess_elem);
+const   char *ngap_get_pdu_gtp_te_id(json_object *js_pdu_sess_elem);
 int     ngap_get_pdu_sess_id(json_object *js_pdu_sess_elem);
 const   char *ngap_get_pdu_sess_nas_pdu(json_object *js_pdu_sess_elem);
 const   char *ngap_get_pdu_sess_rel_cause(json_object *js_pdu_sess_elem);
-int64_t ngap_get_pdu_sess_ambr_dl(json_object *js_pdu_sess_elem);
-int64_t ngap_get_pdu_sess_ambr_ul(json_object *js_pdu_sess_elem);
-const   char *ngap_get_pdu_gtp_te_addr(json_object *js_pdu_sess_elem);
-const   char *ngap_get_pdu_gtp_te_id(json_object *js_pdu_sess_elem);
-const   char *ngap_get_pdu_sess_type(json_object *js_pdu_sess_elem);
-json_object     *ngap_get_pdu_qos_flow_ids(json_object *js_pdu_sess_elem);
-int64_t ngap_get_ctx_rel_amf_ue_ngap_id(json_object *js_ngap_pdu);
-int64_t ngap_get_ctx_rel_ran_ue_ngap_id(json_object *js_ngap_pdu);
-const   char *ngap_get_ctx_rel_cause(json_object *js_ngap_pdu);
-json_object     *ngap_get_unavailable_guami_list(json_object *js_ngap_pdu);
 
 /* ------------------------- pdu.c --------------------------- */
 pdu_ctx_t       *create_pdu_ctx(int pdu_sess_id, int state, const char *pdu_nas_pdu);
@@ -240,6 +262,16 @@ void    sock_read_cb(struct bufferevent *bev, void *data);
 void    sock_flush_cb(ue_ctx_t *ue_ctx);
 void    sock_flush_temp_nas_pdu(ue_ctx_t *ue_ctx);
 
+/* ------------------------- mmc.c --------------------------- */
+int     initMmc();
+void    handleMMCReq (IxpcQMsgType *rxIxpcMsg);
+int     mmcHdlrVector_qsortCmp (const void *a, const void *b);
+int     mmcHdlrVector_bsrchCmp (const void *a, const void *b);
+int     dis_amf_status(IxpcQMsgType *rxIxpcMsg);
+int     dis_ue_status(IxpcQMsgType *rxIxpcMsg);
+int     dis_ue_fill_print(ue_ctx_t *ue_ctx, char *buffer);
+void    dis_ue_status_cb(int conn_fd, short events, void *data);
+
 /* ------------------------- handler.c --------------------------- */
 void    eap_proc_5g_start(int conn_fd, short events, void *data);
 void    eap_proc_5g_nas(ue_ctx_t *ue_ctx, const char *nas_pdu);
@@ -269,6 +301,15 @@ int     ue_pdu_setup_res_handle(ike_msg_t *ike_msg);
 int     ue_ctx_release_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
 int     ue_inform_res_handle(ike_msg_t *ike_msg);
 
+/* ------------------------- overload.c --------------------------- */
+int     NWUCP_OVLD_CHECK(int svc_id, char *oper_str);
+int     NWUCP_OVLD_CHK_NGAP(int proc_code);
+void    NWUCP_OVLD_CHK_FAIL_NGAP(int proc_code, int res);
+int     NWUCP_OVLD_CHK_EAP(n3iwf_msg_t *n3iwf_msg);
+void    NWUCP_OVLD_CHK_FAIL_EAP(n3iwf_msg_t *n3iwf_msg, int res);
+int     NWUCP_OVLD_CHK_TCP();
+void    NWUCP_OVLD_CHK_FAIL_TCP();
+
 /* ------------------------- io_worker.c --------------------------- */
 void    handle_ngap_log(const char *prefix, ngap_msg_t *ngap_msg, event_caller_t caller);
 void    handle_ngap_msg(ngap_msg_t *ngap_msg, event_caller_t caller);
@@ -280,15 +321,6 @@ worker_ctx_t    *worker_ctx_get_by_index(int index);
 void    io_thrd_tick(int conn_fd, short events, void *data);
 void    *io_worker_thread(void *arg);
 
-/* ------------------------- amf.c --------------------------- */
-int     create_amf_list(main_ctx_t *MAIN_CTX);
-void    remove_amf_list(main_ctx_t *MAIN_CTX);
-void    amf_regi(int conn_fd, short events, void *data);
-void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
-void    amf_ctx_unset(amf_ctx_t *amf_ctx);
-int     amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu);
-int     amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);
-
 /* ------------------------- main.c --------------------------- */
 int     load_config(config_t *CFG);
 int     create_n3iwf_profile(main_ctx_t *MAIN_CTX);
@@ -297,16 +329,8 @@ int     create_tcp_server(main_ctx_t *MAIN_CTX);
 int     create_worker_thread(worker_thread_t *WORKER, const char *prefix, main_ctx_t *MAIN_CTX);
 int     initialize(main_ctx_t *MAIN_CTX);
 void    main_tick(int conn_fd, short events, void *data);
+void    main_msgq_read_callback(evutil_socket_t fd, short events, void *data);
 int     main();
-
-/* ------------------------- overload.c --------------------------- */
-int     NWUCP_OVLD_CHECK(int svc_id, char *oper_str);
-int     NWUCP_OVLD_CHK_NGAP(int proc_code);
-void    NWUCP_OVLD_CHK_FAIL_NGAP(int proc_code, int res);
-int     NWUCP_OVLD_CHK_EAP(n3iwf_msg_t *n3iwf_msg);
-void    NWUCP_OVLD_CHK_FAIL_EAP(n3iwf_msg_t *n3iwf_msg, int res);
-int     NWUCP_OVLD_CHK_TCP();
-void    NWUCP_OVLD_CHK_FAIL_TCP();
 
 /* ------------------------- ue.c --------------------------- */
 int     create_ue_list(main_ctx_t *MAIN_CTX);
@@ -336,3 +360,12 @@ json_object     *create_ue_context_release_request_json(uint32_t amf_ue_id, uint
 json_object     *create_ue_context_release_complete_json(uint32_t amf_ue_id, uint32_t ran_ue_id, char *ip_str, int port, ue_ctx_t *ue_ctx);
 json_object     *create_ng_reset_json(uint32_t amf_ue_id, uint32_t ran_ue_id);
 json_object     *create_error_indication_json(uint32_t amf_ue_id, uint32_t ran_ue_id);
+
+/* ------------------------- amf.c --------------------------- */
+int     create_amf_list(main_ctx_t *MAIN_CTX);
+void    remove_amf_list(main_ctx_t *MAIN_CTX);
+void    amf_regi(int conn_fd, short events, void *data);
+void    amf_regi_start(main_ctx_t *MAIN_CTX, amf_ctx_t *amf_ctx);
+void    amf_ctx_unset(amf_ctx_t *amf_ctx);
+int     amf_regi_res_handle(ngap_msg_t *ngap_msg, bool success, json_object *js_ngap_pdu);
+int     amf_status_ind_handle(ngap_msg_t *ngap_msg, json_object *js_ngap_pdu);

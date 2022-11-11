@@ -14,7 +14,7 @@ BUILD_LIBS		= $(BUILD_LIBS_PATH)/libutil.a \
 				  ../PKG/MP/lib/libmsgtrc.a \
 				  -lpthread -lrt -lm -ldl
 
-SRCS			= main.c list.c io_worker.c bf_worker.c stack.c
+SRCS			= main.c list.c io_worker.c bf_worker.c stack.c mmc.c
 OBJS			= $(SRCS:.c=.o)
 AOUT			= sctpc
 DEST			= ../BIN

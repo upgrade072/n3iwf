@@ -14,7 +14,7 @@ int sort_conn_list(const void *a, const void *b)
 	return (strcmp(v_a->name, v_b->name));
 }
 
-void disp_conn_list(main_ctx_t *MAIN_CTX)
+void disp_conn_list(main_ctx_t *MAIN_CTX, char *print_buff)
 {
 	conn_curr_t *CURR_CONN = &MAIN_CTX->SHM_SCTPC_CONN->curr_conn[MAIN_CTX->SHM_SCTPC_CONN->curr_pos];
 
@@ -24,7 +24,6 @@ void disp_conn_list(main_ctx_t *MAIN_CTX)
 	ft_write_ln(table, "[config]", "[connection]", "[association]");
 	ft_add_separator(table);
 
-	//for (int i = 0; i < CURR_CONN->rows_num; i++) {
 	for (int i = 0; i < MAX_SC_CONN_LIST; i++) {
 		conn_info_t *conn = &CURR_CONN->conn_info[i];
 		if (!conn->occupied) continue;
@@ -51,11 +50,16 @@ void disp_conn_list(main_ctx_t *MAIN_CTX)
 				conn->sport,
 				conn->dport,
 				ft_to_string(assoc_table));
-		ft_add_separator(table);
+
 		ft_destroy_table(assoc_table);
+		ft_add_separator(table);
 	}
 	ft_add_separator(table);
-	ERRLOG(LLE, FL, "\n%s\n", ft_to_string(table));
+	if (print_buff != NULL) {
+		sprintf(print_buff + strlen(print_buff), "%s\n", ft_to_string(table));
+	} else {
+		ERRLOG(LLE, FL, "\n%s\n", ft_to_string(table));
+	}
 	ft_destroy_table(table);
 }
 

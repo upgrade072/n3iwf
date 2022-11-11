@@ -53,29 +53,39 @@ int create_n3iwf_profile(main_ctx_t *MAIN_CTX)
 
 int create_qid_info(main_ctx_t *MAIN_CTX)
 {
+	if ((MAIN_CTX->QID_INFO.main_qid = commlib_crteMsgQ(l_sysconf, "NWUCP", TRUE)) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.main_qid not exist!\n", __func__);
+		return (-1);
+	}
 	int queue_key = 0;
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.ngapp_nwucp_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.ngapp_nwucp_qid = util_get_queue_info(queue_key, "ngapp_nwucp_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.ngapp_nwucp_queue not exist!\n", __func__);
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_ngapp_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.nwucp_ngapp_qid = util_get_queue_info(queue_key, "nwucp_ngapp_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.nwucp_ngapp_queue not exist!\n", __func__);
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.eap5g_nwucp_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.eap5g_nwucp_qid = util_get_queue_info(queue_key, "eap5g_nwucp_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.eap5g_nwucp_queue not exist!\n", __func__);
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "queue_id_info.nwucp_eap5g_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.nwucp_eap5g_qid = util_get_queue_info(queue_key, "nwucp_eap5g_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.nwucp_eap5g_queue not exist!\n", __func__);
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "distr_info.ngapp_nwucp_worker_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.ngapp_nwucp_worker_qid = util_get_queue_info(queue_key, "ngapp_nwucp_worker_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.ngapp_nwucp_worker_queue not exist!\n", __func__);
 		return (-1);
 	}
 	config_lookup_int(&MAIN_CTX->CFG, "distr_info.eap5g_nwucp_worker_queue", &queue_key);
 	if ((MAIN_CTX->QID_INFO.eap5g_nwucp_worker_qid = util_get_queue_info(queue_key, "eap5g_nwucp_worker_queue")) < 0) {
+		ERRLOG(LLE, FL, "%s() fatal! queue_id_info.eap5g_nwucp_worker_queue not exist!\n", __func__);
 		return (-1);
 	}
 
@@ -168,6 +178,10 @@ int initialize(main_ctx_t *MAIN_CTX)
 		ERRLOG(LLE, FL, "[%s.%d] ovldlib_init() Error\n", FL);
 		return -1;
 	}
+	if (initMmc() < 0) {
+		ERRLOG(LLE, FL, "[%s.%d] initMmc() Error\n", FL);
+		return -1;
+	}
 
 	if ((load_config(&MAIN_CTX->CFG)	< 0) || 
 		(create_n3iwf_profile(MAIN_CTX) < 0) ||
@@ -198,6 +212,29 @@ void main_tick(int conn_fd, short events, void *data)
 	keepalivelib_increase();
 }
 
+void main_msgq_read_callback(evutil_socket_t fd, short events, void *data)
+{
+    main_ctx_t *MAIN_CTX = (main_ctx_t *)data;
+
+    char recv_buffer[1024*64];
+    GeneralQMsgType *rcv_msg = (GeneralQMsgType *)recv_buffer;
+    int recv_size = 0;
+
+    while ((recv_size = msgrcv(MAIN_CTX->QID_INFO.main_qid, rcv_msg, sizeof(recv_buffer), 0, IPC_NOWAIT)) >= 0) {
+        switch(rcv_msg->mtype) {
+            case MTYPE_SETPRINT:
+                continue;
+            case MTYPE_MMC_REQUEST:
+				handleMMCReq((IxpcQMsgType *)rcv_msg->body);
+                continue;
+            case MTYPE_STATISTICS_REQUEST:
+                continue;
+            default:
+                continue;
+        }
+    }
+}
+
 int main()
 {
 	evthread_use_pthreads();
@@ -214,11 +251,13 @@ int main()
     struct event *ev_tick = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_tick, NULL);
     event_add(ev_tick, &one_sec);
 
-    struct timeval u_sec = {0, 1};
+    struct timeval one_u_sec = {0, 1};
+	struct event *ev_msgq_read = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, main_msgq_read_callback, MAIN_CTX);
+	event_add(ev_msgq_read, &one_u_sec);
     struct event *ev_msg_rcv_from_ngapp = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, msg_rcv_from_ngapp, "main");
-    event_add(ev_msg_rcv_from_ngapp, &u_sec);
+    event_add(ev_msg_rcv_from_ngapp, &one_u_sec);
     struct event *ev_msg_rcv_from_eap5g = event_new(MAIN_CTX->evbase_main, -1, EV_PERSIST, msg_rcv_from_eap5g, "main");
-    event_add(ev_msg_rcv_from_eap5g, &u_sec);
+    event_add(ev_msg_rcv_from_eap5g, &one_u_sec);
 
 	event_base_loop(MAIN_CTX->evbase_main, EVLOOP_NO_EXIT_ON_EMPTY);
 
